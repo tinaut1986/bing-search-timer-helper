@@ -16,6 +16,12 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Si necesitaras devolver algo, retornarías true y llamarías a sendResponse más tarde
     return false;
   }
+  else if (request.type === "openOptionsPage") {
+    console.log("Background received request to open options page.");
+    browser.runtime.openOptionsPage();
+    // No necesitamos devolver nada aquí
+    return false;
+  }
 });
 
 console.log("Background script loaded.");

@@ -34,7 +34,7 @@
     let lastUsedDate = '';      // Fecha (YYYY-MM-DD) de la última vez que se usó la lista
 
     // --- Interface Elements ---
-    let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton; // Añadido showUsedButton
+    let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton, optionsButton;
 
     // --- URL Tracking ---
     let lastHref = document.location.href;
@@ -240,7 +240,73 @@
         }
     }
 
-    async function configureTimerDuration() { /* ... (igual que antes) ... */ }
+        // --- Configura la Duración del Temporizador (Llamada al hacer click en el display) ---
+     async function configureTimerDuration() {
+        console.log("configureTimerDuration called");
+
+        // --- Opcional pero recomendado: Pausar el timer mientras el prompt está abierto ---
+        const wasTimerActive = timerActive; // Recordar si estaba activo
+        if (wasTimerActive) {
+            stopTimer(); // Pausarlo
+            console.log("configureTimerDuration: Timer paused for configuration.");
+        }
+        // --- Fin pausa opcional ---
+
+        const currentMinutes = TARGET_MINUTES; // Obtener el objetivo actual
+        const newMinutesStr = prompt(`Enter new timer duration in minutes (current: ${currentMinutes}):`, currentMinutes);
+
+        if (newMinutesStr !== null) { // Comprobar si el usuario canceló (prompt devuelve null)
+            const newMinutes = parseInt(newMinutesStr, 10); // Convertir a número entero (base 10)
+
+            // Validar la entrada: ¿Es un número válido y es mayor que 0?
+            if (!isNaN(newMinutes) && newMinutes > 0) {
+                console.log(`New timer duration input validated: ${newMinutes} minutes.`);
+                TARGET_MINUTES = newMinutes;        // Actualizar variable global
+                TARGET_SECONDS = newMinutes * 60;   // Actualizar variable global derivada
+
+                try {
+                    // Guardar el nuevo valor en el almacenamiento local (asíncrono)
+                    await browser.storage.local.set({ timerTargetMinutes: TARGET_MINUTES });
+                    console.log(`Timer duration saved successfully to storage: ${TARGET_MINUTES} minutes.`);
+
+                    // Aplicar el nuevo valor reiniciando el temporizador
+                    // resetTimer() usará el nuevo TARGET_SECONDS automáticamente
+                    resetTimer();
+
+                    // Nota: Si el timer estaba pausado, resetTimer lo reiniciará si TARGET_SECONDS > 0
+
+                } catch (err) {
+                    // Error al guardar en storage
+                    console.error("Failed to save timer duration to storage:", err);
+                    alert("Error: Could not save the new timer duration. Please try again.");
+                    // Si falló el guardado, y el timer estaba activo, reiniciarlo con el valor *anterior*
+                    if (wasTimerActive) {
+                         console.log("configureTimerDuration: Restarting timer with previous value after failed save.");
+                         // Podríamos revertir TARGET_MINUTES/SECONDS aquí, pero startTimer usa secondsRemaining que no ha cambiado
+                         startTimer();
+                    }
+                }
+
+            } else {
+                // Entrada inválida (no es un número positivo)
+                console.warn(`Invalid timer duration input: "${newMinutesStr}"`);
+                alert("Invalid input. Please enter a positive whole number for the minutes.");
+                // Si el timer estaba activo y la entrada fue inválida, reanudarlo
+                if (wasTimerActive) {
+                     console.log("configureTimerDuration: Restarting timer after invalid input.");
+                    startTimer();
+                }
+            }
+        } else {
+             // El usuario hizo clic en "Cancelar" en el prompt
+             console.log("Timer duration configuration cancelled by user.");
+             // Si el timer estaba activo y el usuario canceló, reanudarlo
+            if (wasTimerActive) {
+                 console.log("configureTimerDuration: Restarting timer after cancellation.");
+                startTimer();
+            }
+        }
+    }
 
     // --- startTimer con color inicial ---
     function startTimer() {
@@ -391,15 +457,71 @@
             console.warn("setTranslate: Element not found.");
         }
     }
-    // --- Nueva función para mostrar búsquedas usadas ---
-    function showUsedSearches() {
-        console.log("showUsedSearches called");
-        if (usedSearchesToday.length === 0) {
-            alert("No searches have been suggested yet today.");
-        } else {
-            const listString = usedSearchesToday.join("\n");
-            alert(`Searches suggested today:\n--------------------------\n${listString}`);
+
+    // --- Nueva función para mostrar el Historial en un Modal ---
+    function showHistoryModal() {
+        console.log("showHistoryModal called");
+
+        // Eliminar modal anterior si existe
+        const existingOverlay = document.getElementById('bing-history-modal-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
         }
+
+        // Crear el overlay (fondo oscuro)
+        const overlay = document.createElement('div');
+        overlay.id = 'bing-history-modal-overlay';
+
+        // Crear el contenido del modal
+        const modalContent = document.createElement('div');
+        modalContent.id = 'bing-history-modal-content';
+
+        // Título
+        const title = document.createElement('h2');
+        title.textContent = 'Searches Suggested Today';
+
+        // Lista
+        const list = document.createElement('ul');
+        list.id = 'bing-history-list';
+
+        if (usedSearchesToday.length === 0) {
+            const emptyItem = document.createElement('li');
+            emptyItem.textContent = "No searches suggested yet.";
+            emptyItem.style.fontStyle = 'italic';
+            list.appendChild(emptyItem);
+        } else {
+            usedSearchesToday.forEach(search => {
+                const listItem = document.createElement('li');
+                listItem.textContent = search;
+                list.appendChild(listItem);
+            });
+        }
+
+        // Botón de cerrar
+        const closeButton = document.createElement('button');
+        closeButton.id = 'bing-history-modal-close';
+        closeButton.textContent = 'Close';
+        closeButton.onclick = () => { // O addEventListener
+            overlay.style.display = 'none';
+            overlay.remove(); // Limpiar del DOM al cerrar
+        };
+
+        // Construir el modal
+        modalContent.appendChild(title);
+        modalContent.appendChild(list);
+        modalContent.appendChild(closeButton);
+        overlay.appendChild(modalContent);
+
+        // Añadir overlay al body y mostrarlo
+        document.body.appendChild(overlay);
+        overlay.style.display = 'flex'; // Mostrar usando flex para centrar
+
+        // Cerrar el modal si se hace clic en el fondo oscuro (overlay)
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) { // Solo si se hace clic directamente en el overlay
+                closeButton.click(); // Simular clic en el botón de cerrar
+            }
+        });
     }
 
     // --- Interface Creation (Añadir botón para mostrar usadas) ---
@@ -411,45 +533,84 @@
 
         container = document.createElement('div');
         container.id = 'bing-timer-helper';
-        setTranslate(xOffset, yOffset, container);
+        setTranslate(xOffset, yOffset, container);        
 
-        
-
-        // ... (creación de dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton igual que antes) ...
-        console.log("Creating interface 1...");
-        dragHandle = document.createElement('div');
-        console.log("Creating interface 2...");
-        timerTitle = document.createElement('div');
-        console.log("Creating interface 3...");
-        timerDisplay = document.createElement('div');
-        console.log("Creating interface 4...");
-        searchTitle = document.createElement('div');
-        console.log("Creating interface 5...");
-        searchInput = document.createElement('input');
-        console.log("Creating interface 6...");
-        copyButton = document.createElement('button');
-        console.log("Creating interface 7...");
-        newSearchButton = document.createElement('button');
-        console.log("Creating interface 8...");
-
+        // Creación de dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton
         // Estilos básicos (los detalles están en style.css)
-        dragHandle.id = 'bing-timer-drag-handle'; dragHandle.textContent = 'Drag'; dragHandle.style.cursor = 'move';
-        timerTitle.textContent = 'Timer:'; timerTitle.style.fontWeight = 'bold'; timerTitle.style.marginBottom = '5px'; timerTitle.style.marginTop = '5px';
-        timerDisplay.id = 'bing-timer-display'; timerDisplay.textContent = formatTime(secondsRemaining); timerDisplay.style.cursor = 'pointer'; timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
-        searchTitle.textContent = 'Suggested Search:'; searchTitle.style.fontWeight = 'bold'; searchTitle.style.marginTop = '15px'; searchTitle.style.marginBottom = '5px';
-        searchInput.type = 'text'; searchInput.id = 'bing-random-search'; searchInput.readOnly = true; searchInput.style.width = 'calc(100% - 12px)'; searchInput.style.marginBottom = '5px'; searchInput.title = 'Randomly suggested search';
-        copyButton.textContent = 'Copy'; copyButton.id = 'bing-copy-button'; copyButton.title = 'Copy the suggested search to the clipboard';
-        newSearchButton.textContent = 'New'; newSearchButton.id = 'bing-new-search-button'; newSearchButton.title = 'Generate a new random search'; newSearchButton.style.marginLeft = '5px';
+        dragHandle = document.createElement('div');
+        dragHandle.id = 'bing-timer-drag-handle';
+        dragHandle.textContent = 'Drag';
+        dragHandle.style.cursor = 'move';
+
+        timerTitle = document.createElement('div');
+        timerTitle.textContent = 'Timer:';
+        timerTitle.style.fontWeight = 'bold';
+        timerTitle.style.marginBottom = '5px';
+        timerTitle.style.marginTop = '5px';
+
+        timerDisplay = document.createElement('div');
+        timerDisplay.id = 'bing-timer-display';
+        timerDisplay.textContent = formatTime(secondsRemaining);
+        timerDisplay.style.cursor = 'pointer';
+        timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
+
+        searchTitle = document.createElement('div');
+        searchTitle.textContent = 'Suggested Search:';
+        searchTitle.style.fontWeight = 'bold';
+        searchTitle.style.marginTop = '15px';
+        searchTitle.style.marginBottom = '5px';
+
+        searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.id = 'bing-random-search';
+        searchInput.readOnly = true;
+        searchInput.style.width = 'calc(100% - 12px)';
+        searchInput.style.marginBottom = '5px';
+        searchInput.title = 'Randomly suggested search';
+
+        copyButton = document.createElement('button');
+        copyButton.innerHTML = '📋'; // O usa un SVG: <svg>...</svg> Clipboard icon
+        copyButton.id = 'bing-copy-button';
+        copyButton.title = 'Copy the suggested search to the clipboard';
+        copyButton.style.backgroundColor = '#007bff'; // Azul primario
+        copyButton.style.color = 'white';
+        copyButton.style.borderColor = '#0056b3';
+        copyButton.style.padding = '6px 10px'; // Ajustar padding si usas icono
+        copyButton.style.lineHeight = '1'; // Para alinear mejor iconos simples
+
+        newSearchButton = document.createElement('button');
+        newSearchButton.innerHTML = '🔄'; // O usa un SVG: Refresh/Repeat icon
+        newSearchButton.id = 'bing-new-search-button';
+        newSearchButton.title = 'Generate a new random search';
+        newSearchButton.style.marginLeft = '5px';
+        newSearchButton.style.backgroundColor = '#ffc107'; // Amarillo advertencia
+        newSearchButton.style.color = '#333'; // Texto oscuro para contraste
+        newSearchButton.style.borderColor = '#d39e00';
+        newSearchButton.style.padding = '6px 10px';
+        newSearchButton.style.lineHeight = '1';
 
         // Crear botón para mostrar búsquedas usadas
         showUsedButton = document.createElement('button');
-        showUsedButton.textContent = 'History'; // O 'Historial'
+        showUsedButton.innerHTML = '📜'; // O usa un SVG: Scroll/List icon
         showUsedButton.id = 'bing-show-used-button';
         showUsedButton.title = 'Show searches suggested today';
         showUsedButton.style.marginLeft = '5px';
-        showUsedButton.style.backgroundColor = '#6c757d'; // Un gris
+        showUsedButton.style.backgroundColor = '#6c757d'; // Gris secundario
         showUsedButton.style.color = 'white';
         showUsedButton.style.borderColor = '#5a6268';
+        showUsedButton.style.padding = '6px 10px';
+        showUsedButton.style.lineHeight = '1';
+
+        optionsButton = document.createElement('button');
+        optionsButton.innerHTML = '⚙️'; // O usa un SVG: Gear icon
+        optionsButton.id = 'bing-options-button';
+        optionsButton.title = 'Open Extension Options';
+        optionsButton.style.marginLeft = '5px';
+        optionsButton.style.backgroundColor = '#17a2b8'; // Azul info
+        optionsButton.style.color = 'white';
+        optionsButton.style.borderColor = '#138496';
+        optionsButton.style.padding = '6px 10px'; // Ajustar padding
+        optionsButton.style.lineHeight = '1';
 
 
         // --- Append elements ---
@@ -464,7 +625,8 @@
         buttonGroup.style.marginTop = '5px'; // Espacio sobre los botones
         buttonGroup.appendChild(copyButton);
         buttonGroup.appendChild(newSearchButton);
-        buttonGroup.appendChild(showUsedButton); // Añadir el nuevo botón
+        buttonGroup.appendChild(showUsedButton);
+        buttonGroup.appendChild(optionsButton);
         container.appendChild(buttonGroup);
 
         // --- Add Listeners ---
@@ -476,9 +638,18 @@
 
         // Listener para el nuevo botón
         if (showUsedButton) {
-            showUsedButton.addEventListener('click', showUsedSearches);
+            showUsedButton.addEventListener('click', showHistoryModal);
             console.log("Added click listener to showUsedButton.");
         } else console.error("Failed to add click listener: showUsedButton is null");
+
+        if (optionsButton) {
+            optionsButton.addEventListener('click', () => {
+                console.log("Options button clicked");
+                browser.runtime.sendMessage({ type: "openOptionsPage" })
+                    .catch(err => console.error("Error sending openOptionsPage message:", err));
+            });
+            console.log("Added click listener to optionsButton.");
+        } else console.error("Failed to add click listener: optionsButton is null");
 
         // ... (listeners de drag para dragHandle y container igual que antes) ...
         dragHandle.addEventListener('mousedown', dragStart, false);
