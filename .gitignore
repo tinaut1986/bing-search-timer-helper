@@ -1,0 +1,20 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Node dependencies (if you ever use npm/yarn)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts (e.g., zipped extension for distribution)
+*.zip
+*.xpi
+
+# Editor/IDE specific files (examples)
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Log files
+*.log

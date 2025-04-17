@@ -1,0 +1,32 @@
+/* Copia aquí TODO el CSS de tu función addStyles() */
+#bing-timer-helper {
+    position: fixed; top: 15px; right: 15px;
+    background-color: rgba(255, 255, 255, 0.98); border: 1px solid #ccc;
+    padding: 0px 15px 15px 15px; border-radius: 8px; z-index: 99999;
+    font-family: sans-serif; font-size: 14px; box-shadow: 3px 3px 12px rgba(0,0,0,0.25);
+    min-width: 210px; color: #333; touch-action: none;
+}
+#bing-timer-drag-handle {
+    width: 100%; padding: 8px 0; margin: 0 -15px 10px -15px;
+    text-align: center; font-size: 12px; color: #666; background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc; border-top-left-radius: 8px; border-top-right-radius: 8px;
+    user-select: none;
+}
+#bing-timer-display {
+    font-size: 24px; font-weight: bold; color: #0078D4; text-align: center;
+    margin-bottom: 10px; cursor: pointer; /* Keep cursor pointer */
+}
+#bing-random-search {
+    padding: 5px; border: 1px solid #ccc; border-radius: 4px;
+    background-color: #eee; cursor: default; width: calc(100% - 12px); /* Ensure width */
+    margin-bottom: 5px; /* Ensure margin */
+}
+#bing-timer-helper button {
+    padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;
+    cursor: pointer; background-color: #f0f0f0; transition: background-color 0.2s ease;
+    font-size: 13px;
+}
+#bing-timer-helper button:hover { background-color: #e0e0e0; border-color: #bbb; }
+#bing-copy-button { background-color: #0078D4; color: white; border-color: #005A9E; }
+#bing-copy-button:hover { background-color: #005A9E; }
+#bing-new-search-button { margin-left: 5px; } /* Ensure margin */

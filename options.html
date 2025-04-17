@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opciones - Bing Search Timer & Helper</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <h1>Opciones de Bing Search Timer & Helper</h1>
+
+    <div id="status" aria-live="polite"></div>
+
+    <form id="options-form">
+        <p>Edita las listas usadas para generar búsquedas aleatorias. Una entrada por línea.</p>
+
+        <div class="option-group">
+            <label for="userSearchTemplates">Plantillas de Búsqueda (%PLACEHOLDER%):</label>
+            <textarea id="userSearchTemplates" rows="10" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userSystems">Sistemas/Consolas (%SYSTEM%):</label>
+            <textarea id="userSystems" rows="5" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userDevelopers">Desarrolladoras (%DEVELOPER%):</label>
+            <textarea id="userDevelopers" rows="5" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userSagas">Sagas (%SAGA%):</label>
+            <textarea id="userSagas" rows="5" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userGenres">Géneros (%GENRE%):</label>
+            <textarea id="userGenres" rows="5" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userParts">Partes/Números (%PART%):</label>
+            <textarea id="userParts" rows="5" cols="80"></textarea>
+        </div>
+
+        <div class="option-group">
+            <label for="userNumbers">Números Comunes (%NUMBER%):</label>
+            <textarea id="userNumbers" rows="3" cols="80"></textarea>
+        </div>
+
+         <div class="option-group">
+            <label for="userAesthetics">Estéticas (%AESTHETIC%):</label>
+            <textarea id="userAesthetics" rows="4" cols="80"></textarea>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" id="save">Guardar Cambios</button>
+            <button type="button" id="reset">Restaurar Valores por Defecto</button>
+        </div>
+    </form>
+
+    <script src="options.js"></script>
+</body>
+</html>

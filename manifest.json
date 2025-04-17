@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Bing Search Timer & Helper",
+  "version": "1.1",
+  "description": "Displays a configurable, movable timer on Bing search results...",
+  "author": "Tinaut1986 (Adapted by AI)",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  "permissions": [
+    "storage",
+    "notifications",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "*://*.bing.com/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.bing.com/search*"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+
+  // --- AÑADIR/VERIFICAR ESTA SECCIÓN ---
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true // Recomendado para esta cantidad de opciones
+  },
+  // --- FIN options_ui ---
+
+  // --- AÑADIR/VERIFICAR ESTA SECCIÓN (Asegura que options.js pueda cargar defaults) ---
+ "web_accessible_resources": [
+    {
+        // Necesario para que options.js pueda hacer fetch de los defaults
+      "resources": [
+        "data/searchTemplates.json",
+        "data/systems.json",
+        "data/developers.json",
+        "data/sagas.json",
+        "data/genres.json",
+        "data/parts.json",
+        "data/numbers.json",
+        "data/aesthetics.json"
+      ],
+      // NO necesitas matches aquí si solo options.js los carga
+      // Si content.js también los cargara, necesitarías "matches": ["*://*.bing.com/*"]
+      "use_dynamic_url": false, // Firefox no usa esto, pero Chrome sí lo prefiere
+      "matches": ["*://*.bing.com/*"] // Asegura que solo Bing pueda acceder
+    }
+  ],
+   // --- FIN web_accessible_resources ---
+
+   "browser_specific_settings": {
+    "gecko": {
+      "id": "bing-timer-helper@tinaut1986.example.com" // Tu ID único
+    }
+  }
+}
