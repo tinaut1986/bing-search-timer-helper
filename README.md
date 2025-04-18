@@ -1,12 +1,8 @@
 # Bing Search Timer & Helper (Firefox Extension)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!-- Add other badges if you set up CI/CD or versioning -->
 
 A Firefox browser extension that adds a configurable, movable timer with dynamic, unique random search suggestions to Bing search result pages.
-
-![Screenshot Placeholder](placeholder.png)
-*Replace placeholder.png with an actual screenshot or GIF of your extension in action!*
 
 ## Features
 
@@ -26,8 +22,6 @@ A Firefox browser extension that adds a configurable, movable timer with dynamic
 ## Installation
 
 **1. From Firefox Add-ons (AMO) - *Coming Soon!***
-
-*   *(Once published)* You will be able to install the latest stable version directly from the [Firefox Add-ons Website](https://addons.mozilla.org/) (Link placeholder).
 
 **2. Manual Installation / Development:**
 
@@ -74,7 +68,7 @@ To make changes to the extension:
 
 ## Contributing
 
-Contributions are welcome! If you have ideas for improvements or find bugs, please feel free to open an issue or submit a pull request. *(Optional: Add more specific contribution guidelines or link to a CONTRIBUTING.md file)*.
+Contributions are welcome! If you have ideas for improvements or find bugs, please feel free to open an issue or submit a pull request.
 
 ## License
 
