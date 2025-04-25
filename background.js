@@ -1,27 +1,40 @@
-// background.js
-
-// Escucha mensajes del content script
+/**
+ * Listens for messages from content scripts or other parts of the extension.
+ */
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Handle request to show a desktop notification
   if (request.type === "showNotification") {
-    // Crea la notificación usando la API de WebExtensions
-    browser.notifications.create({ // Devuelve una Promise, pero no necesitamos esperar aquí
+    browser.notifications.create({ // Use browser.notifications API
       "type": "basic",
-      "iconUrl": browser.runtime.getURL("icons/icon-48.png"), // Usa un icono de la extensión
-      "title": request.title,
-      "message": request.message
+      "iconUrl": browser.runtime.getURL("icons/icon-48.png"), // Path to icon within extension
+      "title": request.title || "Notification", // Use provided title or default
+      "message": request.message || ""          // Use provided message
     }).catch(error => {
-        console.error("Error creating notification:", error);
+      console.error("Background: Error creating notification:", error);
     });
-    // No necesitamos devolver nada asíncronamente aquí
-    // Si necesitaras devolver algo, retornarías true y llamarías a sendResponse más tarde
+    // Indicate that we won't be sending an asynchronous response
     return false;
   }
+  // Handle request to open the extension's options page
   else if (request.type === "openOptionsPage") {
-    console.log("Background received request to open options page.");
-    browser.runtime.openOptionsPage();
-    // No necesitamos devolver nada aquí
+    // console.log("Background: Received request to open options page.");
+    browser.runtime.openOptionsPage(); // API to open the options page
+    // Indicate that we won't be sending an asynchronous response
     return false;
   }
+
+  // Optional: handle other message types here if needed in the future
+  // else {
+  //     console.log("Background: Received unknown message type:", request.type);
+  // }
+
+  // Return true if you intend to send a response asynchronously using sendResponse
+  // return true;
 });
 
-console.log("Background script loaded.");
+console.log("Bing Search Timer: Background script loaded.");
+
+// Optional: Add listeners for other browser events if needed (e.g., onInstalled)
+// browser.runtime.onInstalled.addListener(details => {
+//     console.log('Extension installed or updated:', details);
+// });

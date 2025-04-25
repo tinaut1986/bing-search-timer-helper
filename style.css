@@ -1,65 +1,179 @@
-/* Copia aquí TODO el CSS de tu función addStyles() */
+/* === Base Widget Container === */
 #bing-timer-helper {
-    position: fixed; top: 15px; right: 15px;
-    background-color: rgba(255, 255, 255, 0.98); border: 1px solid #ccc;
-    padding: 0px 15px 15px 15px; border-radius: 8px; z-index: 99999;
-    font-family: sans-serif; font-size: 14px; box-shadow: 3px 3px 12px rgba(0,0,0,0.25);
-    min-width: 210px; color: #333; touch-action: none;
+    position: fixed;
+    /* Initial position (can be overridden by JS loading saved position) */
+    top: 15px;
+    left: 15px;
+    right: auto;
+    bottom: auto;
+    background-color: rgba(255, 255, 255, 0.98);
+    border: 1px solid #ccc;
+    /* Padding is applied to the content wrapper now */
+    padding: 0;
+    border-radius: 8px;
+    z-index: 99999;
+    /* High z-index to stay on top */
+    font-family: sans-serif;
+    font-size: 14px;
+    box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.25);
+    min-width: 210px;
+    color: #333;
+    /* Prevent page scroll when interacting with the widget on touch devices */
+    touch-action: none;
+    /* Use flexbox for internal layout */
+    display: flex;
+    flex-direction: column;
+    transform: none;
+    /* Quitar !important */
 }
 
+/* === Drag Handle (Top Bar) === */
 #bing-timer-drag-handle {
-    width: 100%; padding: 8px 0; margin: 0 -15px 10px -15px;
-    text-align: center; font-size: 12px; color: #666; background-color: #f0f0f0;
-    border-bottom: 1px solid #ccc; border-top-left-radius: 8px; border-top-right-radius: 8px;
+    width: 100%;
+    /* Occupy full width */
+    padding: 8px 0;
+    margin: 0;
+    /* No extra margins */
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+    border-top-left-radius: inherit;
+    /* Inherit from parent */
+    border-top-right-radius: inherit;
     user-select: none;
+    /* Prevent text selection on drag */
+    cursor: move;
+    flex-shrink: 0;
+    /* Prevent handle from shrinking */
 }
 
+/* === Content Wrapper (Below Handle) === */
+#bing-timer-content-wrapper {
+    /* Apply padding here */
+    padding: 5px 15px 15px 15px;
+    flex-grow: 1;
+    /* Allow it to take available space */
+}
+
+/* Adjust top margin for first element inside wrapper */
+#bing-timer-content-wrapper>div:first-child {
+    margin-top: 0;
+    /* Remove top margin if wrapper padding is sufficient */
+}
+
+/* === Timer Display === */
 #bing-timer-display {
-    font-size: 24px; font-weight: bold; color: #0078D4; text-align: center;
-    margin-bottom: 10px; cursor: pointer; /* Keep cursor pointer */
+    font-size: 24px;
+    font-weight: bold;
+    /* Color is set dynamically by JS */
+    text-align: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    /* Indicate it's clickable */
 }
 
+/* === Search Suggestion Input === */
 #bing-random-search {
-    padding: 5px; border: 1px solid #ccc; border-radius: 4px;
-    background-color: #eee; cursor: default; width: calc(100% - 12px); /* Ensure width */
-    margin-bottom: 5px; /* Ensure margin */
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #eee;
+    cursor: default;
+    width: calc(100% - 12px);
+    /* Adjust width based on padding */
+    margin-bottom: 5px;
 }
 
+/* === General Button Styling === */
 #bing-timer-helper button {
-    padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;
-    cursor: pointer; background-color: #f0f0f0; transition: background-color 0.2s ease;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    transition: background-color 0.2s ease;
     font-size: 13px;
+    /* Base font size */
+    padding: 6px 10px;
+    /* Default padding */
+    margin-left: 5px;
+    /* Default margin */
+    line-height: 1.2;
+    /* Adjust line height for better icon alignment */
+    vertical-align: middle;
+    /* Align buttons nicely */
+}
+
+/* Remove margin from the first button in a group */
+#bing-timer-helper .button-group>button:first-child {
+    margin-left: 0;
 }
 
 #bing-timer-helper button:hover {
     background-color: #e0e0e0;
-    border-color: #bbb; 
+    border-color: #bbb;
 }
 
+/* === Specific Button Styles === */
 #bing-copy-button {
-    background-color: #0078D4;
+    background-color: #007bff;
+    /* Blue */
     color: white;
-    border-color: #005A9E;
+    border-color: #0056b3;
 }
 
 #bing-copy-button:hover {
-    background-color: #005A9E;
+    background-color: #0056b3;
 }
 
 #bing-new-search-button {
-    margin-left: 5px; /* Ensure margin */
+    background-color: #ffc107;
+    /* Yellow */
+    color: #212529;
+    /* Dark text for contrast */
+    border-color: #d39e00;
 }
 
-/* --- Estilos para el Modal del Historial --- */
+#bing-new-search-button:hover {
+    background-color: #e0a800;
+}
+
+#bing-show-used-button {
+    background-color: #6c757d;
+    /* Gray */
+    color: white;
+    border-color: #5a6268;
+}
+
+#bing-show-used-button:hover {
+    background-color: #5a6268;
+}
+
+#bing-options-button {
+    background-color: #17a2b8;
+    /* Teal */
+    color: white;
+    border-color: #138496;
+    padding: 6px 8px;
+    /* Slightly less padding for icon */
+    font-size: 14px;
+}
+
+#bing-options-button:hover {
+    background-color: #138496;
+}
+
+
+/* === History Modal Styles === */
 #bing-history-modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
-    z-index: 100000; /* Muy alto, sobre el widget */
-    display: none; /* Oculto por defecto */
+    inset: 0;
+    /* Replaces top, left, width, height */
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100000;
+    display: none;
+    /* Hidden by default */
     justify-content: center;
     align-items: center;
 }
@@ -69,28 +183,31 @@
     padding: 25px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    max-width: 80%;
-    width: 500px; /* Ancho deseado */
-    max-height: 70vh; /* Altura máxima, 70% del viewport */
+    max-width: 90%;
+    /* Responsive max width */
+    width: 500px;
+    max-height: 70vh;
     display: flex;
     flex-direction: column;
 }
 
 #bing-history-modal-content h2 {
-    margin-top: 0;
-    margin-bottom: 15px;
+    margin: 0 0 15px 0;
     text-align: center;
     color: #333;
+    font-size: 1.2em;
 }
 
 #bing-history-list {
     list-style: none;
     padding: 0;
     margin: 0 0 15px 0;
-    overflow-y: auto; /* Añadir scroll si la lista es larga */
+    overflow-y: auto;
+    /* Scroll for long lists */
     border: 1px solid #eee;
     border-radius: 4px;
-    flex-grow: 1; /* Hacer que la lista ocupe el espacio disponible */
+    flex-grow: 1;
+    /* Take available space */
 }
 
 #bing-history-list li {
@@ -98,8 +215,14 @@
     border-bottom: 1px solid #eee;
     font-size: 14px;
 }
+
 #bing-history-list li:last-child {
     border-bottom: none;
+}
+
+#bing-history-list li:nth-child(odd) {
+    background-color: #f9f9f9;
+    /* Subtle zebra striping */
 }
 
 #bing-history-modal-close {
@@ -109,9 +232,13 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    align-self: flex-end; /* Poner el botón al final */
+    align-self: flex-end;
+    /* Align button to the right */
     margin-top: 10px;
+    font-size: 14px;
+    /* Match list font size */
 }
- #bing-history-modal-close:hover {
-     background-color: #5a6268;
- }
+
+#bing-history-modal-close:hover {
+    background-color: #5a6268;
+}

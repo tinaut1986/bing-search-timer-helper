@@ -1,23 +1,26 @@
-// options.js
-
-// Define las claves de almacenamiento y los archivos JSON correspondientes
+// Map storage keys to default data file paths and textarea IDs
 const configKeys = {
     userSearchTemplates: 'data/searchTemplates.json',
-    userSystems:         'data/systems.json',
-    userDevelopers:      'data/developers.json',
-    userSagas:           'data/sagas.json',
-    userGenres:          'data/genres.json',
-    userParts:           'data/parts.json',
-    userNumbers:         'data/numbers.json',
-    userAesthetics:      'data/aesthetics.json'
+    userSystems: 'data/systems.json',
+    userDevelopers: 'data/developers.json',
+    userSagas: 'data/sagas.json',
+    userGenres: 'data/genres.json',
+    userParts: 'data/parts.json',
+    userNumbers: 'data/numbers.json',
+    userAesthetics: 'data/aesthetics.json'
 };
 
-const statusDiv = document.getElementById('status');
+const statusDiv = document.getElementById('status'); // Div for showing messages
 
-// Muestra mensajes de estado
+/**
+ * Displays status messages to the user (e.g., saved, error).
+ * @param {string} message - The message text.
+ * @param {string} [type='info'] - Message type ('info', 'success', 'error') for styling.
+ * @param {number} [duration=3000] - How long to display (ms), 0 for permanent.
+ */
 function showStatus(message, type = 'info', duration = 3000) {
     statusDiv.textContent = message;
-    statusDiv.className = type; // Aplica clase CSS (success, error, info)
+    statusDiv.className = type; // Apply CSS class based on type
     if (duration > 0) {
         setTimeout(() => {
             statusDiv.textContent = '';
@@ -26,7 +29,11 @@ function showStatus(message, type = 'info', duration = 3000) {
     }
 }
 
-// Carga los datos por defecto desde un archivo JSON
+/**
+ * Loads the default array data from a specified JSON file within the extension.
+ * @param {string} filePath - The path to the JSON file relative to the extension root.
+ * @returns {Promise<Array<string>|null>} The default data array or null on error.
+ */
 async function loadDefaultFromFile(filePath) {
     try {
         const response = await fetch(browser.runtime.getURL(filePath));
@@ -35,147 +42,154 @@ async function loadDefaultFromFile(filePath) {
         }
         const data = await response.json();
         if (!Array.isArray(data)) {
-             throw new Error(`Data in ${filePath} is not an array.`);
+            throw new Error(`Data in ${filePath} is not an array.`);
         }
         return data;
     } catch (error) {
         console.error(`Error loading default data from ${filePath}:`, error);
-        showStatus(`Error loading default data: ${error.message}`, 'error', 0);
-        return null; // Indica fallo
+        showStatus(`Error loading default data (${filePath.split('/').pop()}): ${error.message}`, 'error', 0);
+        return null; // Indicate failure
     }
 }
 
-// Guarda las opciones desde los textareas al almacenamiento
+/**
+ * Saves the current content of the textareas to browser.storage.local.
+ * Triggered by form submission.
+ * @param {Event} e - The form submit event.
+ */
 async function saveOptions(e) {
-    e.preventDefault(); // Prevenir envío de formulario por defecto
-    console.log("Attempting to save options...");
+    e.preventDefault(); // Prevent default form submission
+    // console.log("Attempting to save options...");
 
     const settingsToSave = {};
     let hasError = false;
 
+    // Iterate through configured keys/textareas
     for (const key in configKeys) {
-        const textarea = document.getElementById(key);
+        const textarea = document.getElementById(key); // Assumes textarea ID matches storage key
         if (textarea) {
             const textValue = textarea.value;
-            // Convertir texto (una línea por elemento) a array, limpiando
+            // Convert textarea content (one item per line) to a clean array
             const arrayValue = textValue
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line); // Filtrar líneas vacías
-
-             // Validar si el array resultante es vacío (podría ser intencional)
-             // if (arrayValue.length === 0) {
-             //    console.warn(`Saving empty list for ${key}`);
-                 // Podrías añadir una advertencia al usuario aquí si quisieras
-             //}
-
+                .split('\n')                // Split into lines
+                .map(line => line.trim())   // Remove leading/trailing whitespace
+                .filter(line => line);      // Remove empty lines
             settingsToSave[key] = arrayValue;
         } else {
-            console.error(`Textarea with id "${key}" not found!`);
+            console.error(`Save Error: Textarea with id "${key}" not found!`);
             hasError = true;
         }
     }
 
     if (hasError) {
-         showStatus('Internal error: Could not find all textareas.', 'error', 0);
-         return;
+        showStatus('Internal error: Could not find all textareas.', 'error', 0);
+        return;
     }
 
-
+    // Attempt to save the processed settings
     try {
         await browser.storage.local.set(settingsToSave);
-        console.log("Options saved successfully:", settingsToSave);
-        showStatus('Opciones guardadas correctamente.', 'success');
+        // console.log("Options saved successfully:", settingsToSave);
+        showStatus('Options saved successfully.', 'success');
     } catch (error) {
         console.error("Error saving options:", error);
-        showStatus(`Error al guardar: ${error.message}`, 'error', 0);
+        showStatus(`Error saving options: ${error.message}`, 'error', 0);
     }
 }
 
-// Restaura las opciones en los textareas desde el almacenamiento o los defaults
+/**
+ * Loads settings from storage or defaults and populates the textareas.
+ * Triggered on page load.
+ */
 async function restoreOptions() {
-    console.log("Restoring options...");
+    // console.log("Restoring options...");
     const keysToLoad = Object.keys(configKeys);
-    const defaultValues = {};
-    // Preparar objeto para storage.get, usando null como default inicial
-    keysToLoad.forEach(key => defaultValues[key] = null);
+    // Create an object to request keys from storage, defaulting to null
+    // This allows us to know if a user setting exists or if we need the default
+    const storageRequest = {};
+    keysToLoad.forEach(key => storageRequest[key] = null);
 
     try {
-        const result = await browser.storage.local.get(defaultValues);
-        console.log("Data loaded from storage:", result);
+        // Get user settings from storage
+        const userSettings = await browser.storage.local.get(storageRequest);
+        // console.log("Data loaded from storage:", userSettings);
 
-        // Usar Promise.all para cargar defaults necesarios en paralelo
+        // Load default data files *only* for keys that were null in storage
         const defaultsPromises = [];
-        const defaultsToLoad = {}; // Guardar defaults cargados para no recargar
+        const loadedDefaults = {}; // Cache loaded defaults
 
-        for (const key in result) {
-            if (result[key] === null) { // Si es null, necesitamos cargar el default
-                 if (!defaultsToLoad[key]) { // Evitar cargar el mismo default múltiples veces si hay error
-                     const filePath = configKeys[key];
-                     console.log(`No user setting for ${key}, queueing default load from ${filePath}`);
-                     defaultsPromises.push(
-                         loadDefaultFromFile(filePath).then(defaultData => {
-                             if (defaultData !== null) {
-                                 defaultsToLoad[key] = defaultData; // Guardar default cargado
-                             }
-                             // Si defaultData es null, el error ya se mostró en loadDefaultFromFile
-                         })
-                     );
-                 }
+        for (const key in userSettings) {
+            if (userSettings[key] === null) { // If user hasn't saved this setting
+                if (!loadedDefaults[key]) { // Avoid reloading if already fetched (unlikely here but safe)
+                    const filePath = configKeys[key];
+                    // console.log(`No user setting for ${key}, queueing default load from ${filePath}`);
+                    defaultsPromises.push(
+                        loadDefaultFromFile(filePath).then(defaultData => {
+                            if (defaultData !== null) {
+                                loadedDefaults[key] = defaultData; // Store the loaded default
+                            }
+                            // Error is handled within loadDefaultFromFile
+                        })
+                    );
+                }
             }
         }
 
-        // Esperar a que todos los defaults necesarios se carguen
+        // Wait for all necessary default files to be loaded
         await Promise.all(defaultsPromises);
-        console.log("Defaults loaded:", defaultsToLoad);
+        // console.log("Required defaults loaded:", loadedDefaults);
 
-
-        // Poblar los textareas
+        // Populate the textareas with user data or the loaded default
         for (const key in configKeys) {
             const textarea = document.getElementById(key);
             if (textarea) {
-                let dataToShow = result[key]; // Usar dato del storage si existe
-                if (dataToShow === null) { // Si no existe en storage, usar el default cargado
-                    dataToShow = defaultsToLoad[key] || []; // Usar default o array vacío si la carga falló
-                    console.log(`Using default data for ${key}`);
+                let dataToShow = userSettings[key]; // Prefer user's saved data
+                if (dataToShow === null) { // If no user data, use the default we loaded
+                    dataToShow = loadedDefaults[key] || []; // Fallback to empty array if default loading failed
+                    // console.log(`Using default data for ${key}`);
                 } else {
-                     console.log(`Using user saved data for ${key}`);
+                    // console.log(`Using user saved data for ${key}`);
                 }
-                textarea.value = Array.isArray(dataToShow) ? dataToShow.join('\n') : ''; // Unir con saltos de línea
+                // Convert array back to newline-separated string for textarea
+                textarea.value = Array.isArray(dataToShow) ? dataToShow.join('\n') : '';
             } else {
-                 console.error(`RestoreOptions: Textarea with id "${key}" not found!`);
+                console.error(`RestoreOptions Error: Textarea with id "${key}" not found!`);
             }
         }
-        console.log("Options restored to view.");
+        // console.log("Options restored to view.");
 
     } catch (error) {
         console.error("Error restoring options:", error);
-        showStatus(`Error al cargar la configuración: ${error.message}`, 'error', 0);
+        showStatus(`Error loading configuration: ${error.message}`, 'error', 0);
     }
 }
 
-// Restaura los valores por defecto eliminando los guardados y recargando
+/**
+ * Resets all settings back to their defaults by removing them from storage.
+ * Triggered by the Reset button.
+ */
 async function resetOptions() {
-    if (!confirm("¿Estás seguro de que quieres restaurar todos los valores por defecto? Se perderán tus cambios guardados.")) {
+    if (!confirm("Are you sure you want to restore all default values? Your custom changes will be lost.")) {
         return;
     }
-    console.log("Resetting options to defaults...");
-    const keysToRemove = Object.keys(configKeys);
+    // console.log("Resetting options to defaults...");
+    const keysToRemove = Object.keys(configKeys); // Get all keys we manage
 
     try {
+        // Remove the user's saved settings from storage
         await browser.storage.local.remove(keysToRemove);
-        console.log("User settings removed from storage.");
-        // Ahora, vuelve a cargar y mostrar los defaults en los textareas
-        await restoreOptions(); // restoreOptions cargará los defaults porque storage estará vacío
-        showStatus('Valores por defecto restaurados.', 'success');
+        // console.log("User settings removed from storage.");
+        // Reload the options view; it will now load the defaults because storage is empty
+        await restoreOptions();
+        showStatus('Default values restored.', 'success');
     } catch (error) {
         console.error("Error resetting options:", error);
-        showStatus(`Error al restaurar los valores por defecto: ${error.message}`, 'error', 0);
+        showStatus(`Error restoring defaults: ${error.message}`, 'error', 0);
     }
 }
 
 
-// --- Añadir Event Listeners ---
-document.addEventListener('DOMContentLoaded', restoreOptions);
-document.getElementById('options-form').addEventListener('submit', saveOptions);
-document.getElementById('reset').addEventListener('click', resetOptions);
+// --- Add Event Listeners when the DOM is ready ---
+document.addEventListener('DOMContentLoaded', restoreOptions); // Load options when page loads
+document.getElementById('options-form').addEventListener('submit', saveOptions); // Save on form submit
+document.getElementById('reset').addEventListener('click', resetOptions); // Reset on button click

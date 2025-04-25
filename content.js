@@ -1,108 +1,145 @@
-(async function() {
+(async function () {
     'use strict';
-    console.log("!!! CONTENT SCRIPT INJECTED !!!");
-    // --- Configuration ---
-    const DEFAULT_TARGET_MINUTES = 15;
-    let TARGET_MINUTES;
-    let TARGET_SECONDS;
+    // --- Configuration Constants ---
+    const DEFAULT_TARGET_MINUTES = 15; // Default timer goal in minutes
     const TIMER_INITIAL_RED_DURATION = 10; // Seconds the timer stays red initially
-    
-    let defaultSearchTemplates;
-    let defaultSystems;
-    let defaultDevelopers;
-    let defaultSagas;
-    let defaultGenres;
-    let defaultParts;
-    let defaultNumbers;
-    let defaultAesthetics;
 
+    // --- Variables for Data Loaded from Files/Storage ---
+    // These will hold the lists used for search generation
+    let defaultSearchTemplates, defaultSystems, defaultDevelopers, defaultSagas, defaultGenres, defaultParts, defaultNumbers, defaultAesthetics;
     let searchTemplates, systems, developers, sagas, genres, parts, numbers, aesthetics;
 
-    // --- Timer Variables ---
-    let secondsRemaining;
-    let timerInterval = null;
-    let timerActive = false;
+    // --- Timer State Variables ---
+    let TARGET_MINUTES;        // Current timer goal (loaded from storage or default)
+    let TARGET_SECONDS;        // Current timer goal in seconds
+    let secondsRemaining;      // Current countdown value
+    let timerInterval = null;  // Holds the interval ID for the timer
+    let timerActive = false;   // Is the timer currently running?
 
-    // --- Drag Variables ---
-    let isDragging = false;
-    let currentX, currentY, initialX, initialY;
-    let xOffset = 0;
-    let yOffset = 0;
+    // --- Drag State Variables ---
+    let isDragging = false;    // Is the user currently dragging the widget?
+    let currentX, currentY, initialX, initialY; // Coordinates used during drag
+    let xOffset = 0;           // Saved X offset (from top-left) for widget position
+    let yOffset = 0;           // Saved Y offset for widget position
 
-    // --- Unique Search Variables ---
-    let usedSearchesToday = []; // Lista de búsquedas usadas hoy
-    let lastUsedDate = '';      // Fecha (YYYY-MM-DD) de la última vez que se usó la lista
+    // --- Unique Search State Variables ---
+    let usedSearchesToday = []; // Holds searches suggested today to avoid repeats
+    let lastUsedDate = '';      // YYYY-MM-DD date for resetting usedSearchesToday
 
-    // --- Interface Elements ---
+    // --- Interface Element Variables ---
     let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton, optionsButton;
 
-    // --- URL Tracking ---
-    let lastHref = document.location.href;
+    // --- URL Tracking Variable ---
+    let lastHref = document.location.href; // Used by MutationObserver to detect navigation
 
-    // --- Funciones Helper (formatTime, getRandomElement - sin cambios desde v2.1) ---
+    // ==================================
+    // === Utility Helper Functions ===
+    // ==================================
+
+    /**
+     * Formats a number of seconds into MM:SS format.
+     * @param {number} seconds - The total seconds.
+     * @returns {string} Formatted time string or "--:--" if input is invalid.
+     */
     function formatTime(seconds) {
+        if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) { return "--:--"; }
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
-    // --- Dynamic Search Generation ---
+    /**
+     * Gets a random element from an array.
+     * @param {Array<any>} arr - The array to pick from.
+     * @returns {any|undefined} A random element or undefined if the array is empty/invalid.
+     */
     function getRandomElement(arr) {
-        if (!arr || arr.length === 0) return "";
+        if (!arr || arr.length === 0) {
+            console.warn("getRandomElement: Received empty or invalid array.");
+            return undefined;
+        }
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    // --- Generate Dynamic Search (Con más logging y retorno claro en error) ---
+    /**
+     * Debounce function to limit the rate at which a function can fire.
+     * @param {Function} func - The function to debounce.
+     * @param {number} wait - The debounce duration in milliseconds.
+     * @param {boolean} [immediate] - Trigger the function on the leading edge instead of the trailing.
+     * @returns {Function} The debounced function.
+     */
+    function debounce(func, wait, immediate) {
+        var timeout;
+        return function () {
+            var context = this, args = arguments;
+            var later = function () {
+                timeout = null;
+                if (!immediate) func.apply(context, args);
+            };
+            var callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) func.apply(context, args);
+        };
+    };
+
+    // ========================================
+    // === Search Suggestion Generation Logic ===
+    // ========================================
+
+    /**
+     * Generates a random search query based on templates and data lists.
+     * @returns {string} A generated search query or an error placeholder string.
+     */
     function generateDynamicSearch() {
+        // Ensure global lists are populated before proceeding
+        if (!searchTemplates || !systems || !developers || !sagas || !genres || !parts || !numbers || !aesthetics) {
+            console.error("generateDynamicSearch: Core data lists are not loaded!");
+            return "[Data Load Error]";
+        }
+
         let template = getRandomElement(searchTemplates);
         const currentYear = new Date().getFullYear();
-        console.log('generateDynamicSearch: Initial template:', template);
 
-         if (!template) {
-            console.error("generateDynamicSearch: Failed to get a valid template (searchTemplates empty or issue?).");
-            return "[Template Error]"; // Mensaje claro
+        if (!template) {
+            console.error("generateDynamicSearch: Failed to get a valid template.");
+            return "[Template Error]";
         }
 
         try {
-            // Variable para rastrear si hubo reemplazos (ayuda a depurar)
-            let replacementsMade = { year: false, system: false, developer: false, saga: false, genre: false, part: false, number: false, aesthetic: false, comparison: false };
+            let replacementsMade = { /* ... (for debugging, can be removed if stable) ... */ };
 
             if (template.includes('%SAGA% %PART% vs %SAGA% %PART%')) {
                 replacementsMade.comparison = true;
                 const saga = getRandomElement(sagas);
                 let part1 = getRandomElement(parts);
                 let part2 = getRandomElement(parts);
-                if (!saga || part1 === undefined || part2 === undefined)
-                    throw new Error("Missing data for comparison template");
-                
+                if (!saga || part1 === undefined || part2 === undefined) throw new Error("Missing data for comparison template");
+                // ... (logic to ensure part1 !== part2) ...
                 let attempts = 0;
                 while (part1 === part2 && parts && parts.length > 1 && attempts < 5) {
-                    part2 = getRandomElement(parts);
-                    attempts++;
+                    part2 = getRandomElement(parts); attempts++;
                 }
                 if (part2 === undefined) throw new Error("Failed to get second part for comparison");
-
-                // Replace placeholders carefully
+                // ... (careful replacement logic) ...
                 let replacedSaga1 = false, replacedPart1 = false, replacedSaga2 = false, replacedPart2 = false;
                 template = template.replace('%SAGA%', () => { replacedSaga1 = true; return saga; });
                 template = template.replace('%PART%', () => { replacedPart1 = true; return part1; });
                 template = template.replace('%SAGA%', () => { replacedSaga2 = true; return saga; });
                 template = template.replace('%PART%', () => { replacedPart2 = true; return part2; });
-                if (!replacedSaga1 || !replacedPart1 || !replacedSaga2 || !replacedPart2) {
-                    console.warn("Comparison replacement incomplete:", { replacedSaga1, replacedPart1, replacedSaga2, replacedPart2 });
-                }
+                if (!replacedSaga1 || !replacedPart1 || !replacedSaga2 || !replacedPart2)
+                    console.warn("Comparison replacement incomplete.");
 
             } else {
                 const replacer = (match, list, key) => {
                     const element = getRandomElement(list);
                     if (element === undefined) {
-                        console.warn(`generateDynamicSearch: Could not find random element for ${match} (list: ${key})`);
-                        return match; // Keep placeholder if replacement fails
+                        console.warn(`generateDynamicSearch: Could not find random element for ${match}`);
+                        return match;
                     }
-                    replacementsMade[key] = true; // Mark that this type was replaced
+                    replacementsMade[key] = true;
                     return element;
                 };
-
                 if (template.includes('%YEAR%')) { template = template.replace(/%YEAR%/g, currentYear); replacementsMade.year = true; }
                 if (template.includes('%SYSTEM%')) template = template.replace(/%SYSTEM%/g, (match) => replacer(match, systems, 'system'));
                 if (template.includes('%DEVELOPER%')) template = template.replace(/%DEVELOPER%/g, (match) => replacer(match, developers, 'developer'));
@@ -113,87 +150,85 @@
                 if (template.includes('%AESTHETIC%')) template = template.replace(/%AESTHETIC%/g, (match) => replacer(match, aesthetics, 'aesthetic'));
             }
 
-            console.log('generateDynamicSearch: Replacements attempted:', replacementsMade);
-            console.log('generateDynamicSearch: Final result:', template);
-
             if (!template || /%[A-Z]+%/.test(template)) {
                 console.warn("generateDynamicSearch: Result is empty or still contains placeholders:", template);
-                return template || "[Replacement Error]"; // Devolver template (con placeholders) o error
+                return template || "[Replacement Error]";
             }
             return template;
 
         } catch (error) {
             console.error("Error during placeholder replacement:", error);
-            return "[Generation Error]"; // Mensaje claro
+            return "[Generation Error]";
         }
     }
 
-    // --- Nueva función para obtener búsquedas únicas ---
-    async function getUniqueSuggestedSearch(maxAttempts = 30) { // Aumentar intentos por si acaso
-        console.log("getUniqueSuggestedSearch called. Used today:", usedSearchesToday.length);
+    /**
+     * Generates a search suggestion, ensuring it hasn't been used today.
+     * Updates the local storage list of used searches.
+     * @param {number} [maxAttempts=30] - Maximum tries to find a unique search.
+     * @returns {Promise<string>} A unique search suggestion or a fallback string.
+     */
+    async function getUniqueSuggestedSearch(maxAttempts = 30) {
         let attempts = 0;
         while (attempts < maxAttempts) {
-            const candidate = generateDynamicSearch(); // Get a raw candidate
+            const candidate = generateDynamicSearch();
 
-            // Validar candidato (no vacío, no error, no usado hoy)
             if (candidate && !candidate.startsWith('[') && !usedSearchesToday.includes(candidate)) {
-            console.log(`Unique search found (Attempt ${attempts + 1}): ${candidate}`);
-            usedSearchesToday.push(candidate); // Add to list IN MEMORY
+                usedSearchesToday.push(candidate);
 
-            // Guardar la lista actualizada y la fecha actual en storage
-             try {
+                try {
                     const today = new Date().toISOString().split('T')[0];
+                    // Save updated list and potentially update date if it changed (though handled in initialize)
                     await browser.storage.local.set({
-                        lastUsedDate: today, // Guardar fecha actual
-                        usedSearchesToday: usedSearchesToday // Guardar lista actualizada
+                        lastUsedDate: today,
+                        usedSearchesToday: usedSearchesToday
                     });
-                    console.log("Saved updated used search list.");
                 } catch (err) {
                     console.error("Failed to save updated used search list:", err);
-                    // Considerar si revertir el push a usedSearchesToday si el guardado falla? Por ahora no.
                 }
-                return candidate; // Return the unique search
-            } else if (candidate && usedSearchesToday.includes(candidate)) {
-                console.log(`Attempt ${attempts + 1}: Candidate "${candidate}" already used today.`);
-            } else if (!candidate || candidate.startsWith('[')) {
-                console.log(`Attempt ${attempts + 1}: Invalid candidate generated: "${candidate}"`);
-                // Si la generación base falla consistentemente, no seguir intentando indefinidamente
-                if (candidate && candidate.startsWith('[')) break; // Salir si es un error de generación explícito
+                return candidate;
+            } else if (!(candidate && usedSearchesToday.includes(candidate))) {
+                if (candidate && candidate.startsWith('['))
+                    break; // Avoid infinite loops on generation errors
             }
-
             attempts++;
         }
         console.warn(`Could not find a unique search after ${maxAttempts} attempts.`);
-        return "[No unique searches left?]"; // Fallback
+        return "[No unique searches left?]";
     }
 
-    // --- Funciones Principales (Modificadas/Nuevas) ---
+    // =============================
+    // === Core Action Functions ===
+    // =============================
 
-    async function updateSearchDisplay() { // Hacerla async por getUniqueSuggestedSearch
-        console.log("updateSearchDisplay called");
+    /**
+     * Updates the search suggestion input field with a new unique search.
+     */
+    async function updateSearchDisplay() {
         if (searchInput) {
-            const suggested = await getUniqueSuggestedSearch(); // Usar la nueva función async
-            console.log("Setting search input to:", suggested);
+            const suggested = await getUniqueSuggestedSearch();
             searchInput.value = suggested ?? "[Search Gen Failed]";
         } else {
-             console.warn("updateSearchDisplay: searchInput element not found");
+            console.warn("updateSearchDisplay: searchInput element not found");
         }
     }
 
+    /**
+     * Copies the text from the search suggestion input field to the clipboard.
+     */
     async function copyToClipboard() {
-        console.log("copyToClipboard called"); // Log
         if (searchInput && searchInput.value) {
             try {
                 await navigator.clipboard.writeText(searchInput.value);
-                if (copyButton) copyButton.textContent = 'Copied!'; // Check exists
+                if (copyButton) copyButton.innerHTML = 'Copied!'; // Use innerHTML for icons/text
                 setTimeout(() => {
-                    if (copyButton) copyButton.textContent = 'Copy'; // Check exists
+                    if (copyButton) copyButton.innerHTML = '📋'; // Restore original icon/text
                 }, 1500);
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                if (copyButton) copyButton.textContent = 'Error'; // Check exists
+                if (copyButton) copyButton.innerHTML = 'Error';
                 setTimeout(() => {
-                    if (copyButton) copyButton.textContent = 'Copy'; // Check exists
+                    if (copyButton) copyButton.innerHTML = '📋'; // Restore original icon/text
                 }, 1500);
             }
         } else {
@@ -201,12 +236,24 @@
         }
     }
 
+    /**
+     * Sends a message to the background script to display a browser notification.
+     */
     function sendNotification() {
-        console.log("sendNotification called"); // Log
-        browser.runtime.sendMessage({ /* ... (igual) ... */ }).catch(/* ... (igual) ... */);
+        browser.runtime.sendMessage({
+            type: "showNotification",
+            title: "Time's Up!",
+            message: `You've reached your goal of ${TARGET_MINUTES} minutes on Bing search.`
+        }).catch(err => {
+            console.error("Error sending notification message:", err);
+            // Fallback alert if messaging fails
+            alert(`Time's Up! You've reached your goal of ${TARGET_MINUTES} minutes.`);
+        });
     }
 
-    // --- Timer Update con Colores ---
+    /**
+     * Updates the timer display and applies color coding. Called every second by setInterval.
+     */
     function updateTimer() {
         if (typeof secondsRemaining !== 'number' || isNaN(secondsRemaining)) {
             console.error("updateTimer: secondsRemaining is invalid:", secondsRemaining);
@@ -218,106 +265,71 @@
         if (timerDisplay) {
             timerDisplay.textContent = formatTime(secondsRemaining);
 
-            // Lógica de color: Rojo los primeros 10s, Verde después, Rojo en Meta
+            // Apply color logic
             if (secondsRemaining <= 0) {
-                // La meta la maneja stopTimer, pero por si acaso
-                timerDisplay.style.color = 'red';
+                timerDisplay.style.color = 'red'; // Goal reached
             } else if (secondsRemaining >= TARGET_SECONDS - TIMER_INITIAL_RED_DURATION) {
-                timerDisplay.style.color = 'red'; // Primeros segundos
+                timerDisplay.style.color = 'red'; // Initial red period
             } else {
-                timerDisplay.style.color = '#28a745'; // Verde (Bootstrap success green)
+                timerDisplay.style.color = '#28a745'; // Normal green running state
             }
-
         } else {
-             console.warn("updateTimer: timerDisplay element not found, stopping timer.");
-             stopTimer(); return;
+            console.warn("updateTimer: timerDisplay element not found, stopping timer.");
+            stopTimer(); return;
         }
 
         if (secondsRemaining <= 0) {
-            console.log("Timer reached zero.");
-            stopTimer(true); // goalReached = true
+            stopTimer(true); // Pass true for goalReached
             sendNotification();
         }
     }
 
-        // --- Configura la Duración del Temporizador (Llamada al hacer click en el display) ---
-     async function configureTimerDuration() {
-        console.log("configureTimerDuration called");
+    /**
+     * Prompts the user to enter a new timer duration, saves it, and resets the timer.
+     */
+    async function configureTimerDuration() {
+        const wasTimerActive = timerActive;
+        if (wasTimerActive) stopTimer(); // Pause timer during prompt
 
-        // --- Opcional pero recomendado: Pausar el timer mientras el prompt está abierto ---
-        const wasTimerActive = timerActive; // Recordar si estaba activo
-        if (wasTimerActive) {
-            stopTimer(); // Pausarlo
-            console.log("configureTimerDuration: Timer paused for configuration.");
-        }
-        // --- Fin pausa opcional ---
-
-        const currentMinutes = TARGET_MINUTES; // Obtener el objetivo actual
+        const currentMinutes = TARGET_MINUTES;
         const newMinutesStr = prompt(`Enter new timer duration in minutes (current: ${currentMinutes}):`, currentMinutes);
 
-        if (newMinutesStr !== null) { // Comprobar si el usuario canceló (prompt devuelve null)
-            const newMinutes = parseInt(newMinutesStr, 10); // Convertir a número entero (base 10)
-
-            // Validar la entrada: ¿Es un número válido y es mayor que 0?
+        if (newMinutesStr !== null) {
+            const newMinutes = parseInt(newMinutesStr, 10);
             if (!isNaN(newMinutes) && newMinutes > 0) {
-                console.log(`New timer duration input validated: ${newMinutes} minutes.`);
-                TARGET_MINUTES = newMinutes;        // Actualizar variable global
-                TARGET_SECONDS = newMinutes * 60;   // Actualizar variable global derivada
-
+                TARGET_MINUTES = newMinutes;
+                TARGET_SECONDS = newMinutes * 60;
                 try {
-                    // Guardar el nuevo valor en el almacenamiento local (asíncrono)
                     await browser.storage.local.set({ timerTargetMinutes: TARGET_MINUTES });
-                    console.log(`Timer duration saved successfully to storage: ${TARGET_MINUTES} minutes.`);
-
-                    // Aplicar el nuevo valor reiniciando el temporizador
-                    // resetTimer() usará el nuevo TARGET_SECONDS automáticamente
-                    resetTimer();
-
-                    // Nota: Si el timer estaba pausado, resetTimer lo reiniciará si TARGET_SECONDS > 0
-
+                    resetTimer(); // Reset will use new TARGET_SECONDS and start if needed
                 } catch (err) {
-                    // Error al guardar en storage
-                    console.error("Failed to save timer duration to storage:", err);
-                    alert("Error: Could not save the new timer duration. Please try again.");
-                    // Si falló el guardado, y el timer estaba activo, reiniciarlo con el valor *anterior*
-                    if (wasTimerActive) {
-                         console.log("configureTimerDuration: Restarting timer with previous value after failed save.");
-                         // Podríamos revertir TARGET_MINUTES/SECONDS aquí, pero startTimer usa secondsRemaining que no ha cambiado
-                         startTimer();
-                    }
+                    console.error("Failed to save timer duration:", err);
+                    alert("Error: Could not save the new timer duration.");
+                    if (wasTimerActive)
+                        startTimer(); // Restart with old value if save failed
                 }
-
             } else {
-                // Entrada inválida (no es un número positivo)
                 console.warn(`Invalid timer duration input: "${newMinutesStr}"`);
                 alert("Invalid input. Please enter a positive whole number for the minutes.");
-                // Si el timer estaba activo y la entrada fue inválida, reanudarlo
-                if (wasTimerActive) {
-                     console.log("configureTimerDuration: Restarting timer after invalid input.");
-                    startTimer();
-                }
+                if (wasTimerActive)
+                    startTimer(); // Resume if input was invalid
             }
-        } else {
-             // El usuario hizo clic en "Cancelar" en el prompt
-             console.log("Timer duration configuration cancelled by user.");
-             // Si el timer estaba activo y el usuario canceló, reanudarlo
-            if (wasTimerActive) {
-                 console.log("configureTimerDuration: Restarting timer after cancellation.");
-                startTimer();
-            }
-        }
+        } else if (wasTimerActive)
+            startTimer(); // Resume if cancelled
     }
 
-    // --- startTimer con color inicial ---
+    /**
+     * Starts the timer interval if not already active and time > 0.
+     * Sets the initial display text and color.
+     */
     function startTimer() {
-         console.log(`startTimer called. Active: ${timerActive}, Remaining: ${secondsRemaining}`);
-         if (typeof secondsRemaining === 'undefined' || isNaN(secondsRemaining)) {
-             console.warn("startTimer: Cannot start, secondsRemaining invalid:", secondsRemaining);
-             return;
-         }
+        if (typeof secondsRemaining === 'undefined' || isNaN(secondsRemaining)) {
+            console.warn("startTimer: Cannot start, secondsRemaining invalid:", secondsRemaining);
+            return;
+        }
 
+        // Clear any existing interval to prevent duplicates
         if (timerInterval !== null) {
-            console.log("startTimer: Clearing existing interval first.");
             clearInterval(timerInterval);
             timerInterval = null;
         }
@@ -328,159 +340,234 @@
                 timerDisplay.textContent = formatTime(secondsRemaining);
                 timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
 
-                 // Establecer color inicial
-                 if (secondsRemaining >= TARGET_SECONDS - TIMER_INITIAL_RED_DURATION) {
+                // Set initial color based on remaining time
+                if (secondsRemaining >= TARGET_SECONDS - TIMER_INITIAL_RED_DURATION) {
                     timerDisplay.style.color = 'red';
-                 } else {
-                    timerDisplay.style.color = '#28a745'; // Verde
-                 }
-                 console.log(`startTimer: Initial color set to ${timerDisplay.style.color}`);
+                } else {
+                    timerDisplay.style.color = '#28a745';
+                }
 
-                console.log("startTimer: Setting timer interval...");
                 timerInterval = setInterval(updateTimer, 1000);
-                 console.log("startTimer: Interval ID:", timerInterval);
             } else {
                 console.warn("startTimer: timerDisplay not found, cannot start.");
                 timerActive = false;
             }
         } else if (secondsRemaining <= 0) {
-             console.log("startTimer: Timer already at or below zero.");
-             if (timerDisplay) { // Asegurar estado de meta
-                 timerDisplay.textContent = "Goal!";
-                 timerDisplay.style.color = 'red';
-                 timerDisplay.title = `Goal reached! (${TARGET_MINUTES} min). Click to change duration.`;
-             }
-             timerActive = false;
+            if (timerDisplay) { // Ensure goal state is shown
+                timerDisplay.textContent = "Goal!";
+                timerDisplay.style.color = 'red';
+                timerDisplay.title = `Goal reached! (${TARGET_MINUTES} min). Click to change duration.`;
+            }
+            timerActive = false;
         } else {
-             console.log("startTimer: Timer is already active or conditions not met.");
-              if (timerDisplay) {
-                 timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
-             }
+            if (timerDisplay) { // Update title in case config changed while active
+                timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
+            }
         }
     }
 
-    // --- stopTimer con color de meta ---
+    /**
+     * Stops the timer interval.
+     * @param {boolean} [goalReached=false] - If true, sets display to "Goal!" state.
+     */
     function stopTimer(goalReached = false) {
-        console.log(`stopTimer called. Goal reached: ${goalReached}, Interval ID: ${timerInterval}`);
         if (timerInterval !== null) {
             clearInterval(timerInterval);
-            timerInterval = null;
+            timerInterval = null; // Clear the interval ID
         }
-        timerActive = false;
+        timerActive = false; // Set state to inactive
         if (goalReached && timerDisplay) {
             timerDisplay.textContent = "Goal!";
-            timerDisplay.style.color = 'red'; // Asegurar rojo en meta
+            timerDisplay.style.color = 'red';
             timerDisplay.title = `Goal reached! (${TARGET_MINUTES} min). Click to change duration.`;
         }
-        // Si no es goalReached, el color se queda como estaba en el último tick de updateTimer
+        // If not goal reached, the display just stops updating
     }
 
-    // resetTimer ahora solo reinicia los segundos y llama a startTimer
-    function resetTimer(applyNewDuration = false) {
-        console.log("resetTimer called.");
-        // No llamar a stopTimer aquí, startTimer limpiará el intervalo viejo
-        secondsRemaining = TARGET_SECONDS; // Usar el valor actual (puede haber cambiado)
-        console.log("resetTimer: secondsRemaining reset to", secondsRemaining);
+    /**
+     * Resets the timer countdown to the target duration and starts it.
+     */
+    function resetTimer() {
+        // Stop is implicitly handled by startTimer clearing the old interval
+        secondsRemaining = TARGET_SECONDS; // Reset countdown
         if (container && timerDisplay) {
-             startTimer(); // startTimer se encargará de limpiar el viejo y empezar el nuevo
+            startTimer(); // Start timer (will handle clearing old interval)
         } else {
             console.warn("Attempted to reset timer before interface was created.");
         }
     }
 
-    // --- Drag Functions (Con Logging Inicial) ---
-    async function dragStart(e) {
-        console.log("dragStart triggered by:", e.type, "Target:", e.target); // Log
-        if (e.target !== dragHandle) {
-             console.log("dragStart: Event target is not the drag handle.");
-             return; // Salir si no es el handle
-        }
-        // xOffset y yOffset deberían estar cargados por initialize
+    // ===============================
+    // === Drag and Drop Functions ===
+    // ===============================
 
-        if (e.type === "touchstart") {
-            e.preventDefault(); // Importante para táctil
-            initialX = e.touches[0].clientX - xOffset;
-            initialY = e.touches[0].clientY - yOffset;
-        } else { // mousedown
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            document.addEventListener('mousemove', drag, false);
-            document.addEventListener('mouseup', dragEnd, false);
-        }
-        isDragging = true;
-        if (container) container.style.cursor = 'grabbing';
-        console.log("dragStart: Dragging initiated. Initial coords:", {initialX, initialY}, "Current Offset:", {xOffset, yOffset});
-    }
-
-    function drag(e) {
-        if (!isDragging) return;
-        // console.log("drag move event:", e.type); // Log (muy ruidoso)
-
-        if (e.type === "touchmove") {
-            e.preventDefault(); // Importante para táctil
-            currentX = e.touches[0].clientX - initialX;
-            currentY = e.touches[0].clientY - initialY;
-        } else { // mousemove
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-        }
-        xOffset = currentX; // Actualizar el offset mientras se arrastra
-        yOffset = currentY;
-        setTranslate(xOffset, yOffset, container);
-    }
-
-    async function dragEnd(e) {
-        console.log("dragEnd triggered by:", e.type); // Log
-        if (!isDragging) return; // Evitar doble ejecución
-        isDragging = false;
-
-        try {
-            await browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset });
-            console.log(`dragEnd: Position saved: X=${xOffset}, Y=${yOffset}`);
-        } catch (err) {
-            console.error("dragEnd: Failed to save widget position:", err);
-        }
-
-        if (container) container.style.cursor = 'default';
-        if (dragHandle) dragHandle.style.cursor = 'move'; // Restaurar cursor del handle
-        if (e.type === "mouseup") {
-            document.removeEventListener('mousemove', drag, false);
-            document.removeEventListener('mouseup', dragEnd, false);
-        }
-    }
-
+    /**
+     * Sets the CSS transform property to move the element.
+     * @param {number} xPos - The X translation offset.
+     * @param {number} yPos - The Y translation offset.
+     * @param {HTMLElement} el - The element to move.
+     */
     function setTranslate(xPos, yPos, el) {
         if (el) {
-            // console.log(`setTranslate: Applying transform: translate3d(${xPos}px, ${yPos}px, 0)`); // Log (ruidoso)
             el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
         } else {
             console.warn("setTranslate: Element not found.");
         }
     }
 
-    // --- Nueva función para mostrar el Historial en un Modal ---
-    function showHistoryModal() {
-        console.log("showHistoryModal called");
+    /**
+     * Checks if the widget is outside the viewport boundaries and adjusts its position if needed.
+     * Also saves the corrected position.
+     */
+    function ensureWidgetInBounds() {
+        if (!container) return;
 
-        // Eliminar modal anterior si existe
-        const existingOverlay = document.getElementById('bing-history-modal-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
+        const widgetRect = container.getBoundingClientRect();
+        const winWidth = window.innerWidth;
+        const winHeight = window.innerHeight;
+        const margin = 5;
+        const minX = margin;
+        const minY = margin;
+        // Calculate max based on *top-left* corner of widget
+        const maxX = winWidth - widgetRect.width - margin;
+        const maxY = winHeight - widgetRect.height - margin;
+
+        let needsUpdate = false;
+        let clampedX, clampedY;
+
+        // Get current transform values accurately
+        const style = window.getComputedStyle(container);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        const currentTranslateX = matrix.m41;
+        const currentTranslateY = matrix.m42;
+
+        clampedX = currentTranslateX;
+        clampedY = currentTranslateY;
+
+        // Clamp X (prevent going too far off-screen)
+        if (currentTranslateX < minX) { clampedX = minX; needsUpdate = true; }
+        if (currentTranslateX > maxX) { clampedX = maxX; needsUpdate = true; }
+
+        // Clamp Y
+        if (currentTranslateY < minY) { clampedY = minY; needsUpdate = true; }
+        if (currentTranslateY > maxY) { clampedY = maxY; needsUpdate = true; }
+
+
+        if (needsUpdate) {
+            xOffset = clampedX;
+            yOffset = clampedY;
+            setTranslate(xOffset, yOffset, container);
+
+            // Save corrected position asynchronously
+            browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
+                .catch(err => console.error("Failed to save corrected widget position:", err));
+        }
+    }
+
+
+    /**
+     * Initiates the drag operation on mousedown/touchstart.
+     * @param {MouseEvent|TouchEvent} e - The event object.
+     */
+    async function dragStart(e) {
+        if (e.target !== dragHandle) { return; } // Only drag by the handle
+
+        // Use current transform as the starting point for offsets
+        const style = window.getComputedStyle(container);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        xOffset = matrix.m41;
+        yOffset = matrix.m42;
+
+        if (e.type === "touchstart") {
+            e.preventDefault(); // Prevent page scroll/zoom on touch
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+        } else { // mousedown
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            // Add listeners to the document to capture mouse movements outside the widget
+            document.addEventListener('mousemove', drag, false);
+            document.addEventListener('mouseup', dragEnd, false);
+        }
+        isDragging = true;
+        if (container) container.style.cursor = 'grabbing'; // Visual feedback
+    }
+
+    /**
+     * Handles the dragging movement (mousemove/touchmove).
+     * @param {MouseEvent|TouchEvent} e - The event object.
+     */
+    function drag(e) {
+        if (!isDragging) return;
+
+        if (e.type === "touchmove") {
+            e.preventDefault(); // Prevent scroll during touch drag
+            currentX = e.touches[0].clientX - initialX;
+            currentY = e.touches[0].clientY - initialY;
+        } else { // mousemove
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
         }
 
-        // Crear el overlay (fondo oscuro)
+        // Update the offset variables IN REAL TIME based on current drag position
+        xOffset = currentX;
+        yOffset = currentY;
+
+        // Apply the visual translation
+        setTranslate(xOffset, yOffset, container);
+    }
+
+    /**
+     * Ends the drag operation (mouseup/touchend). Saves the final position.
+     * @param {MouseEvent|TouchEvent} e - The event object.
+     */
+    async function dragEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // xOffset and yOffset hold the final position from the 'drag' function
+
+        // Ensure the final position is within bounds before saving
+        ensureWidgetInBounds(); // This will potentially update xOffset/yOffset again
+
+        try {
+            // Save the potentially clamped final position
+            await browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset });
+        } catch (err) {
+            console.error("dragEnd: Failed to save widget position:", err);
+        }
+
+        // Reset cursors
+        if (container) container.style.cursor = 'default';
+        if (dragHandle) dragHandle.style.cursor = 'move';
+
+        // Remove document listeners added for mouse dragging
+        if (e.type === "mouseup") {
+            document.removeEventListener('mousemove', drag, false);
+            document.removeEventListener('mouseup', dragEnd, false);
+        }
+        // Touch listeners remain on the container element
+    }
+
+
+    // ================================
+    // === Interface and DOM Manipulation ===
+    // ================================
+
+    /**
+     * Displays the list of used searches for the day in a modal dialog.
+     */
+    function showHistoryModal() {
+        const existingOverlay = document.getElementById('bing-history-modal-overlay');
+        if (existingOverlay)
+            existingOverlay.remove(); // Remove previous if exists
+
         const overlay = document.createElement('div');
         overlay.id = 'bing-history-modal-overlay';
-
-        // Crear el contenido del modal
         const modalContent = document.createElement('div');
         modalContent.id = 'bing-history-modal-content';
-
-        // Título
         const title = document.createElement('h2');
         title.textContent = 'Searches Suggested Today';
-
-        // Lista
         const list = document.createElement('ul');
         list.id = 'bing-history-list';
 
@@ -497,60 +584,59 @@
             });
         }
 
-        // Botón de cerrar
         const closeButton = document.createElement('button');
         closeButton.id = 'bing-history-modal-close';
         closeButton.textContent = 'Close';
-        closeButton.onclick = () => { // O addEventListener
+        closeButton.onclick = () => {
             overlay.style.display = 'none';
-            overlay.remove(); // Limpiar del DOM al cerrar
+            overlay.remove();
         };
 
-        // Construir el modal
         modalContent.appendChild(title);
         modalContent.appendChild(list);
         modalContent.appendChild(closeButton);
         overlay.appendChild(modalContent);
-
-        // Añadir overlay al body y mostrarlo
         document.body.appendChild(overlay);
-        overlay.style.display = 'flex'; // Mostrar usando flex para centrar
+        overlay.style.display = 'flex'; // Show modal
 
-        // Cerrar el modal si se hace clic en el fondo oscuro (overlay)
+        // Close modal on overlay click
         overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) { // Solo si se hace clic directamente en el overlay
-                closeButton.click(); // Simular clic en el botón de cerrar
-            }
+            if (event.target === overlay) closeButton.click();
         });
     }
 
-    // --- Interface Creation (Añadir botón para mostrar usadas) ---
-    function createInterface() {
-        if (document.getElementById('bing-timer-helper')) {
-             console.log("Widget already exists."); return;
-        }
-        console.log("Creating interface...");
 
+    /**
+     * Creates the entire widget interface and adds it to the page.
+     */
+    function createInterface() {
+        if (document.getElementById('bing-timer-helper'))
+            return;
+
+        // --- Main Container ---
         container = document.createElement('div');
         container.id = 'bing-timer-helper';
-        setTranslate(xOffset, yOffset, container);        
+        setTranslate(xOffset, yOffset, container); // Apply loaded/default position
 
-        // Creación de dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton
-        // Estilos básicos (los detalles están en style.css)
+        // --- Drag Handle ---
         dragHandle = document.createElement('div');
         dragHandle.id = 'bing-timer-drag-handle';
         dragHandle.textContent = 'Drag';
-        dragHandle.style.cursor = 'move';
 
+        // --- Content Wrapper ---
+        const contentWrapper = document.createElement('div');
+        contentWrapper.id = 'bing-timer-content-wrapper';
+
+        // --- Elements inside Content Wrapper ---
         timerTitle = document.createElement('div');
         timerTitle.textContent = 'Timer:';
         timerTitle.style.fontWeight = 'bold';
         timerTitle.style.marginBottom = '5px';
-        timerTitle.style.marginTop = '5px';
+        // timerTitle.style.marginTop = '5px'; // Removed, handled by wrapper padding
 
         timerDisplay = document.createElement('div');
         timerDisplay.id = 'bing-timer-display';
-        timerDisplay.textContent = formatTime(secondsRemaining);
+        timerDisplay.textContent = formatTime(secondsRemaining); // Use initial value
         timerDisplay.style.cursor = 'pointer';
         timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
 
@@ -564,112 +650,234 @@
         searchInput.type = 'text';
         searchInput.id = 'bing-random-search';
         searchInput.readOnly = true;
-        searchInput.style.width = 'calc(100% - 12px)';
+        searchInput.style.width = 'calc(100% - 12px)'; // Input width within padding
         searchInput.style.marginBottom = '5px';
         searchInput.title = 'Randomly suggested search';
 
+        // --- Buttons ---
         copyButton = document.createElement('button');
-        copyButton.innerHTML = '📋'; // O usa un SVG: <svg>...</svg> Clipboard icon
+        copyButton.innerHTML = '📋'; // Icon
         copyButton.id = 'bing-copy-button';
-        copyButton.title = 'Copy the suggested search to the clipboard';
-        copyButton.style.backgroundColor = '#007bff'; // Azul primario
-        copyButton.style.color = 'white';
-        copyButton.style.borderColor = '#0056b3';
-        copyButton.style.padding = '6px 10px'; // Ajustar padding si usas icono
-        copyButton.style.lineHeight = '1'; // Para alinear mejor iconos simples
+        copyButton.title = 'Copy the suggested search';
+        // Styles applied via CSS
 
         newSearchButton = document.createElement('button');
-        newSearchButton.innerHTML = '🔄'; // O usa un SVG: Refresh/Repeat icon
+        newSearchButton.innerHTML = '🔄'; // Icon
         newSearchButton.id = 'bing-new-search-button';
         newSearchButton.title = 'Generate a new random search';
-        newSearchButton.style.marginLeft = '5px';
-        newSearchButton.style.backgroundColor = '#ffc107'; // Amarillo advertencia
-        newSearchButton.style.color = '#333'; // Texto oscuro para contraste
-        newSearchButton.style.borderColor = '#d39e00';
-        newSearchButton.style.padding = '6px 10px';
-        newSearchButton.style.lineHeight = '1';
+        // Styles applied via CSS
 
-        // Crear botón para mostrar búsquedas usadas
         showUsedButton = document.createElement('button');
-        showUsedButton.innerHTML = '📜'; // O usa un SVG: Scroll/List icon
+        showUsedButton.innerHTML = '📜'; // Icon
         showUsedButton.id = 'bing-show-used-button';
         showUsedButton.title = 'Show searches suggested today';
-        showUsedButton.style.marginLeft = '5px';
-        showUsedButton.style.backgroundColor = '#6c757d'; // Gris secundario
-        showUsedButton.style.color = 'white';
-        showUsedButton.style.borderColor = '#5a6268';
-        showUsedButton.style.padding = '6px 10px';
-        showUsedButton.style.lineHeight = '1';
+        // Styles applied via CSS
 
         optionsButton = document.createElement('button');
-        optionsButton.innerHTML = '⚙️'; // O usa un SVG: Gear icon
+        optionsButton.innerHTML = '⚙️'; // Icon
         optionsButton.id = 'bing-options-button';
         optionsButton.title = 'Open Extension Options';
-        optionsButton.style.marginLeft = '5px';
-        optionsButton.style.backgroundColor = '#17a2b8'; // Azul info
-        optionsButton.style.color = 'white';
-        optionsButton.style.borderColor = '#138496';
-        optionsButton.style.padding = '6px 10px'; // Ajustar padding
-        optionsButton.style.lineHeight = '1';
+        // Styles applied via CSS
 
-
-        // --- Append elements ---
-        container.appendChild(dragHandle);
-        container.appendChild(timerTitle);
-        container.appendChild(timerDisplay);
-        container.appendChild(searchTitle);
-        container.appendChild(searchInput);
-        // Agrupar botones en una línea si se quiere
-
+        // --- Button Group Container ---
         const buttonGroup = document.createElement('div');
-        buttonGroup.style.marginTop = '5px'; // Espacio sobre los botones
+        buttonGroup.className = 'button-group'; // Optional class for styling group
+        buttonGroup.style.marginTop = '5px';
         buttonGroup.appendChild(copyButton);
         buttonGroup.appendChild(newSearchButton);
         buttonGroup.appendChild(showUsedButton);
         buttonGroup.appendChild(optionsButton);
-        container.appendChild(buttonGroup);
 
-        // --- Add Listeners ---
-        console.log("Adding event listeners...");
-        // ... (listeners para timerDisplay, copyButton, newSearchButton igual que antes) ...
-        timerDisplay.addEventListener('click', configureTimerDuration);
-        copyButton.addEventListener('click', copyToClipboard);
-        newSearchButton.addEventListener('click', updateSearchDisplay); // Llama a la versión async ahora
+        // --- Assemble Content Wrapper ---
+        contentWrapper.appendChild(timerTitle);
+        contentWrapper.appendChild(timerDisplay);
+        contentWrapper.appendChild(searchTitle);
+        contentWrapper.appendChild(searchInput);
+        contentWrapper.appendChild(buttonGroup);
 
-        // Listener para el nuevo botón
-        if (showUsedButton) {
+        // --- Assemble Main Container ---
+        container.appendChild(dragHandle);
+        container.appendChild(contentWrapper);
+
+        // --- Add Event Listeners ---
+        if (timerDisplay)
+            timerDisplay.addEventListener('click', configureTimerDuration);
+
+        if (copyButton)
+            copyButton.addEventListener('click', copyToClipboard);
+
+        if (newSearchButton)
+            newSearchButton.addEventListener('click', updateSearchDisplay);
+
+        if (showUsedButton)
             showUsedButton.addEventListener('click', showHistoryModal);
-            console.log("Added click listener to showUsedButton.");
-        } else console.error("Failed to add click listener: showUsedButton is null");
 
         if (optionsButton) {
             optionsButton.addEventListener('click', () => {
-                console.log("Options button clicked");
                 browser.runtime.sendMessage({ type: "openOptionsPage" })
                     .catch(err => console.error("Error sending openOptionsPage message:", err));
             });
-            console.log("Added click listener to optionsButton.");
-        } else console.error("Failed to add click listener: optionsButton is null");
+        }
 
-        // ... (listeners de drag para dragHandle y container igual que antes) ...
-        dragHandle.addEventListener('mousedown', dragStart, false);
-        dragHandle.addEventListener('touchstart', dragStart, { passive: false });
-        container.addEventListener('touchmove', drag, { passive: false });
-        container.addEventListener('touchend', dragEnd, false);
-        container.addEventListener('touchcancel', dragEnd, false);
+        // Drag listeners
+        if (dragHandle) {
+            dragHandle.addEventListener('mousedown', dragStart, false);
+            dragHandle.addEventListener('touchstart', dragStart, { passive: false });
+        }
+        if (container) {
+            container.addEventListener('touchmove', drag, { passive: false });
+            container.addEventListener('touchend', dragEnd, false);
+            container.addEventListener('touchcancel', dragEnd, false);
+        }
 
-        // --- Append container to body ---
+        // --- Append to Page ---
         document.body.appendChild(container);
-        console.log("Appended container to body.");
 
-        // --- Initial search display ---
-        updateSearchDisplay(); // Cargar la primera búsqueda única
-
-        console.log("Interface created successfully.");
+        // --- Load Initial Search ---
+        updateSearchDisplay();
     }
 
+    /**
+     * Observes DOM changes to detect SPA navigation within Bing search.
+     */
+    function observeChanges() {
+        if (window.bingTimerObserver) { return; } // Prevent multiple observers
+
+        const observer = new MutationObserver(mutations => {
+            // Use rAF for checking URL after potential DOM updates/rendering
+            requestAnimationFrame(() => {
+                if (document.location.href !== lastHref) {
+                    lastHref = document.location.href;
+                    // Reset timer only if we are still on a Bing search page and widget exists
+                    if (location.hostname.includes('bing.com') && location.pathname.startsWith('/search') && document.getElementById('bing-timer-helper')) {
+                        resetTimer();
+                    } else if (!location.hostname.includes('bing.com')) {
+                        stopTimer(); // Stop if navigated away from Bing
+                    } else if (!document.getElementById('bing-timer-helper') && location.hostname.includes('bing.com') && location.pathname.startsWith('/search')) {
+                        console.warn("Bing Search Timer: Navigation detected, but widget not found.");
+                    }
+                }
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        window.bingTimerObserver = observer; // Store reference
+    }
+
+    // ==================================
+    // === Utility Helper Functions ===
+    // ==================================
+
+    /**
+     * Debounce function to limit the rate at which a function can fire.
+     * @param {Function} func - The function to debounce.
+     * @param {number} wait - The debounce duration in milliseconds.
+     * @param {boolean} [immediate] - Trigger the function on the leading edge instead of the trailing.
+     * @returns {Function} The debounced function.
+     */
+    function debounce(func, wait, immediate) {
+        var timeout;
+        return function () {
+            var context = this, args = arguments;
+            var later = function () {
+                timeout = null;
+                if (!immediate) func.apply(context, args);
+            };
+            var callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) func.apply(context, args);
+        };
+    };
+
+    /**
+     * Clamps a value between a minimum and maximum.
+     * @param {number} value - The value to clamp.
+     * @param {number} min - The minimum allowed value.
+     * @param {number} max - The maximum allowed value.
+     * @returns {number} The clamped value.
+     */
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    /**
+     * Sets the CSS transform property to move the element.
+     * @param {number} xPos - The X translation offset.
+     * @param {number} yPos - The Y translation offset.
+     * @param {HTMLElement} el - The element to move.
+     */
+    function setTranslate(xPos, yPos, el) {
+        if (el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        } // No añadir console.warn aquí para evitar ruido si el elemento aún no existe
+    }
+
+    /**
+     * Calculates the valid boundaries and clamps the position.
+     * @param {number} targetX - The desired X position (translation value).
+     * @param {number} targetY - The desired Y position (translation value).
+     * @param {HTMLElement} element - The element being positioned.
+     * @returns {{x: number, y: number, clamped: boolean}} Clamped position and flag.
+     */
+    function getClampedPosition(targetX, targetY, element) {
+        // ... (La definición completa de getClampedPosition que te pasé antes, con sus logs si quieres) ...
+        if (!element) return { x: targetX, y: targetY, clamped: false };
+        const widgetRect = element.getBoundingClientRect();
+        const winWidth = document.documentElement.clientWidth || window.innerWidth;
+        const winHeight = document.documentElement.clientHeight || window.innerHeight;
+        const margin = 5;
+        if (!widgetRect.width || !widgetRect.height || widgetRect.width <= 0 || widgetRect.height <= 0) { return { x: targetX, y: targetY, clamped: false }; }
+        const minX = margin; const minY = margin;
+        const maxX = winWidth - widgetRect.width - margin; const maxY = winHeight - widgetRect.height - margin;
+        const safeMinX = minX; const safeMinY = minY;
+        const safeMaxX = Math.max(safeMinX, maxX); const safeMaxY = Math.max(safeMinY, maxY);
+        const clampedX = clamp(targetX, safeMinX, safeMaxX); const clampedY = clamp(targetY, safeMinY, safeMaxY);
+        const wasClamped = clampedX !== targetX || clampedY !== targetY;
+        // Optional logging here if needed
+        return { x: clampedX, y: clampedY, clamped: wasClamped };
+    }
+
+
+    /**
+     * Checks bounds on window resize and applies correction if needed.
+     * This function is debounced when added as a listener.
+     */
+    function handleResize() {
+        if (!container) return; // Exit if the widget container doesn't exist
+
+        // Get the current position directly from the applied transform style
+        const style = window.getComputedStyle(container);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        const currentTranslateX = matrix.m41;
+        const currentTranslateY = matrix.m42;
+
+        // Calculate where this position should be clamped according to the NEW window size
+        const clampedPos = getClampedPosition(currentTranslateX, currentTranslateY, container);
+
+        // If the current position is now out of bounds (clamping occurred)
+        if (clampedPos.clamped) {
+            // Update the global offset variables to the new clamped position
+            xOffset = clampedPos.x;
+            yOffset = clampedPos.y;
+            // Move the widget visually
+            setTranslate(xOffset, yOffset, container);
+
+            // Save the newly corrected position to storage
+            browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
+                .catch(err => console.error("Failed to save resize-adjusted widget position:", err));
+        }
+    }
+
+
+    // ====================================
+    // === Initialization and Execution ===
+    // ====================================
+
+    /**
+     * Loads default data lists from packaged JSON files.
+     * @returns {Promise<boolean>} True if successful, false otherwise.
+     */
     async function loadDataFromFiles() {
-        console.log(">>> loadDataFromFiles: Function CALLED <<<"); // Log A
         try {
             const urls = {
                 templates: browser.runtime.getURL('data/searchTemplates.json'),
@@ -682,217 +890,189 @@
                 numbers: browser.runtime.getURL('data/numbers.json'),
             };
 
-            console.log(">>> loadDataFromFiles: Fetching URLs:", urls); // Log B
+            const responses = await Promise.all(Object.values(urls).map(url => fetch(url)));
 
-            // Parsear cada respuesta como JSON
-            const responses = await Promise.all([
-                fetch(urls.templates), fetch(urls.systems), fetch(urls.developers),
-                fetch(urls.parts), fetch(urls.aesthetics), fetch(urls.genres),
-                fetch(urls.sagas), fetch(urls.numbers)
-            ]);
-
-            console.log(">>> loadDataFromFiles: All fetch responses received."); // Log C
-
-            // Verificar respuestas antes de parsear
-            for(const res of responses) {
-                if (!res.ok) {
-                    console.error(`>>> loadDataFromFiles: HTTP error! Status: ${res.status} for URL: ${res.url}`);
-                    throw new Error(`Failed to fetch ${res.url} (Status: ${res.status})`);
-                }
+            for (const res of responses) {
+                if (!res.ok) throw new Error(`Failed to fetch ${res.url} (Status: ${res.status})`);
             }
 
             const jsonData = await Promise.all(responses.map(res => res.json()));
 
-            console.log(">>> loadDataFromFiles: All JSON parsed."); // Log D
+            if (jsonData.length !== 8)
+                throw new Error(`Expected 8 data arrays, got ${jsonData.length}`);
 
-            // Asignar a variables globales (o variables locales si prefieres)
-            // ¡Asegúrate de que los nombres coinciden con los usados en el resto del script!
+            // Assign to the specific default variables
             [
                 defaultSearchTemplates, defaultSystems, defaultDevelopers,
                 defaultParts, defaultAesthetics, defaultGenres,
                 defaultSagas, defaultNumbers
             ] = jsonData;
 
-
-            // Validación básica de los datos cargados (opcional pero útil)
-            if (!Array.isArray(defaultSearchTemplates) || defaultSearchTemplates.length === 0) {
-                 console.warn(">>> loadDataFromFiles: Loaded defaultSearchTemplates is not a valid/non-empty array.");
-                 // Podrías lanzar un error aquí si es crítico
-            }
-
-            // ... (validaciones similares para otras listas si lo deseas) ...
-
-            console.log(">>> loadDataFromFiles: Data assigned successfully."); // Log E
-            return true; // Indicar éxito
+            return true; // Success
 
         } catch (error) {
-            // Mostrar el error específico que ocurrió
-            console.error(">>> loadDataFromFiles: ERROR caught <<<", error); // Log F
-            return false; // Indicar fallo
+            console.error("loadDataFromFiles: ERROR caught:", error);
+            return false; // Failure
         }
     }
 
-        // --- Initialization Function (Estrategia de Carga Revisada) ---
+    /**
+     * Main initialization function for the content script.
+     * Loads defaults, loads user settings, calculates initial position,
+     * sets up the interface, and starts timers/listeners.
+     */
     async function initialize() {
-        console.log(">>> initialize: Function CALLED <<<");
 
-        // 1. Cargar los datos por defecto desde los archivos JSON ---
-        console.log(">>> initialize: Calling loadDataFromFiles...");
+        // 1. Load Default Data from Files first
+        // This populates defaultSearchTemplates, defaultSystems, etc., globally in this scope
         const dataLoaded = await loadDataFromFiles();
-        console.log(`>>> initialize: loadDataFromFiles returned: ${dataLoaded}`);
         if (!dataLoaded) {
-            console.error(">>> initialize: Failed to load default data from files. Aborting.");
-            // Podrías intentar mostrar un error en la interfaz si ya estuviera creada
-            return;
+            console.error("Bing Search Timer: Failed to load default data from files. Aborting initialization.");
+            return; // Stop if essential defaults failed to load
         }
-        console.log(">>> initialize: Default data loaded successfully.");
 
-        // --- Bloque Try/Catch Principal ---
+        // --- Try/Catch for Storage access and subsequent setup ---
         try {
-            console.log(">>> initialize: Entering main try block.");
-
-            // 2. Cargar SOLO los datos guardados por el usuario desde storage ---
-            //    Pedimos las claves sin pasar defaults para las listas grandes.
-            //    Para las otras, sí podemos pasar defaults simples.
-            console.log(">>> initialize: Attempting storage.get for user settings...");
+            // 2. Load User Settings / Widget State from Storage
+            // Request keys, use 'null' as default for position to detect if it was ever saved
             const userData = await browser.storage.local.get({
-                timerTargetMinutes: DEFAULT_TARGET_MINUTES, // Default simple
-                widgetPosX: 0,                        // Default simple
-                widgetPosY: 0,                        // Default simple
-                lastUsedDate: '',                     // Default simple
-                usedSearchesToday: [],                 // Default simple
-                // NO pedimos defaults para las listas aquí, solo las claves
-                userSearchTemplates: null, // Pedir la clave, default a null si no existe
-                userSystems: null,
-                userDevelopers: null,
-                userSagas: null,
-                userGenres: null,
-                userParts: null,
-                userNumbers: null,
-                userAesthetics: null
+                timerTargetMinutes: DEFAULT_TARGET_MINUTES,
+                widgetPosX: null, // Use null to check if position was saved
+                widgetPosY: null,
+                lastUsedDate: '',
+                usedSearchesToday: [],
+                // Request user-configured lists, default to null if not set
+                userSearchTemplates: null, userSystems: null, userDevelopers: null,
+                userSagas: null, userGenres: null, userParts: null,
+                userNumbers: null, userAesthetics: null
             });
 
-            console.log(">>> initialize: storage.get successful. User data:", userData);
-
-            // 3. Asignar valores a variables globales, usando defaults si userData es null ---
-            console.log(">>> initialize: Assigning final values to global variables...");
-
-            TARGET_MINUTES = userData.timerTargetMinutes ?? DEFAULT_TARGET_MINUTES; // Usar nullish coalescing
+            // 3. Assign Settings (Timer, Date, Used Searches)
+            TARGET_MINUTES = userData.timerTargetMinutes ?? DEFAULT_TARGET_MINUTES;
             TARGET_SECONDS = TARGET_MINUTES * 60;
-            secondsRemaining = TARGET_SECONDS;
-            xOffset = userData.widgetPosX ?? 0;
-            yOffset = userData.widgetPosY ?? 0;
+            secondsRemaining = TARGET_SECONDS; // Set initial countdown value
             lastUsedDate = userData.lastUsedDate ?? '';
             const loadedUsedSearches = userData.usedSearchesToday ?? [];
 
-            // Para las listas, si userData.user... es null (o no es un array), usa el default cargado del archivo
+            // 4. Assign Template Lists (Use saved user data or fallback to loaded defaults)
             searchTemplates = Array.isArray(userData.userSearchTemplates) ? userData.userSearchTemplates : defaultSearchTemplates;
-            systems         = Array.isArray(userData.userSystems)        ? userData.userSystems        : defaultSystems;
-            developers      = Array.isArray(userData.userDevelopers)     ? userData.userDevelopers     : defaultDevelopers;
-            sagas           = Array.isArray(userData.userSagas)          ? userData.userSagas          : defaultSagas;
-            genres          = Array.isArray(userData.userGenres)         ? userData.userGenres         : defaultGenres;
-            parts           = Array.isArray(userData.userParts)          ? userData.userParts          : defaultParts;
-            numbers         = Array.isArray(userData.userNumbers)        ? userData.userNumbers        : defaultNumbers;
-            aesthetics      = Array.isArray(userData.userAesthetics)     ? userData.userAesthetics     : defaultAesthetics;
+            systems = Array.isArray(userData.userSystems) ? userData.userSystems : defaultSystems;
+            developers = Array.isArray(userData.userDevelopers) ? userData.userDevelopers : defaultDevelopers;
+            sagas = Array.isArray(userData.userSagas) ? userData.userSagas : defaultSagas;
+            genres = Array.isArray(userData.userGenres) ? userData.userGenres : defaultGenres;
+            parts = Array.isArray(userData.userParts) ? userData.userParts : defaultParts;
+            numbers = Array.isArray(userData.userNumbers) ? userData.userNumbers : defaultNumbers;
+            aesthetics = Array.isArray(userData.userAesthetics) ? userData.userAesthetics : defaultAesthetics;
 
-            console.log(`Assigned settings: Duration=${TARGET_MINUTES}m, PosX=${xOffset}, PosY=${yOffset}. Initial seconds: ${secondsRemaining}`);
-            console.log(`Assigned search data: Last Used Date='${lastUsedDate}', Used Today Count=${loadedUsedSearches?.length}`); // Optional chaining
-            console.log(`Using ${searchTemplates?.length ?? 0} search templates, ${systems?.length ?? 0} systems, etc.`);
+            // 5. Determine and Assign Initial Position Offsets (xOffset, yOffset)
+            let needsAdjustToRightDefault = false; // Flag specific for default right calculation
 
-            // 4. Comprobar si la fecha ha cambiado (misma lógica) ---
-            const today = new Date().toISOString().split('T')[0];
-            if (lastUsedDate !== today) {
-                console.log(`Date changed (${lastUsedDate} -> ${today}). Resetting used searches list.`);
-                usedSearchesToday = [];
-                lastUsedDate = today;
-                try {
-                    await browser.storage.local.set({ lastUsedDate: today, usedSearchesToday: [] });
-                } catch (saveErr) {
-                     console.error("Error saving reset search data:", saveErr);
-                }
+            if (userData.widgetPosX !== null && userData.widgetPosY !== null) {
+                // Use the position saved by the user
+                xOffset = userData.widgetPosX;
+                yOffset = userData.widgetPosY;
             } else {
-                usedSearchesToday = Array.isArray(loadedUsedSearches) ? loadedUsedSearches : [];
-                console.log("Date is the same. Using loaded used searches list.");
+                // No position saved - Set flag to calculate default top-right LATER
+                // For the *initial* render before calculation, place it at CSS default (15,15)
+                // The transform offset variables start at 0,0 relative to the CSS position
+                xOffset = 0; // Start with zero transform offset initially
+                yOffset = 0;
+                needsAdjustToRightDefault = true; // Set flag to adjust after creation
             }
 
-            // 5. Validar listas finales (opcional pero bueno) ---
-             if (!Array.isArray(searchTemplates) || searchTemplates.length === 0) {
-                 console.error("CRITICAL: No search templates available after loading/defaults. Search generation WILL FAIL.");
-                 // Considera detener o mostrar error
-             }
+            // 6. Handle Daily Reset for Used Searches
+            const today = new Date().toISOString().split('T')[0];
+            if (lastUsedDate !== today) {
+                usedSearchesToday = [];
+                lastUsedDate = today;
+                try { await browser.storage.local.set({ lastUsedDate: today, usedSearchesToday: [] }); }
+                catch (saveErr) { console.error("Error saving reset search data:", saveErr); }
+            } else
+                usedSearchesToday = Array.isArray(loadedUsedSearches) ? loadedUsedSearches : [];
 
-            // 6. Crear interfaz ---
-            console.log(">>> initialize: Proceeding to create interface...");
+            // 7. Validate Essential Data (Example)
+            if (!Array.isArray(searchTemplates) || searchTemplates.length === 0) {
+                console.error("BST: CRITICAL - No search templates available.");
+                // Consider stopping or disabling features
+            }
+
+            // 8. Create the UI
+            // This applies the initial transform based on xOffset/yOffset (saved or 0,0)
             createInterface();
 
-            // 7. Iniciar temporizador y observador ---
-            console.log(">>> initialize: Proceeding to start timer and observer...");
+            // 9. Adjust Position if Necessary (Initial Default OR Out-of-Bounds Saved)
+            // Use setTimeout to ensure the element is rendered and has dimensions
+            setTimeout(() => {
+                if (!container) {
+                    console.error("BST: [Timeout] Container not found!");
+                    return;
+                }
+
+                if (needsAdjustToRightDefault) {
+                    // Calculate the target X offset for top-right default position
+                    const widgetRect = container.getBoundingClientRect();
+
+                    // *** NUEVA VALIDACIÓN DE DIMENSIONES ***
+                    if (!widgetRect || !widgetRect.width || widgetRect.width <= 0) {
+                        console.warn(`BST: [Timeout] Cannot calculate default right pos, widget has no valid width yet. Width: ${widgetRect?.width}`);
+                        // Podrías intentar de nuevo con otro setTimeout o simplemente dejarlo en 15,15
+                        // Por ahora, lo dejaremos donde está (15,15 relativo) si no hay ancho.
+                        // Opcionalmente, guardar (0,0) como indicación de posición desconocida?
+                        // browser.storage.local.set({ widgetPosX: 0, widgetPosY: 0 }).catch(err => console.error("Failed to save zero position:", err));
+                        return; // Salir si no hay ancho
+                    }
+                    // *** FIN VALIDACIÓN ***
+
+                    const winWidth = document.documentElement.clientWidth || window.innerWidth;
+                    const margin = 15; // Target margin from the right edge
+                    const targetX = winWidth - widgetRect.width - margin; // Calculate target X offset
+                    const targetY = 15; // Target Y offset (same as CSS top)
+
+                    // Clamp the calculated default position
+                    const clampedPos = getClampedPosition(targetX, targetY, container); // getClampedPosition ya loguea internamente
+
+                    xOffset = clampedPos.x; // Actualizar global
+                    yOffset = clampedPos.y;
+                    setTranslate(xOffset, yOffset, container); // Aplicar visual update
+
+                    // Save this calculated default position so it's remembered
+                    browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
+                        .catch(err => console.error("Failed to save initial default right position:", err));
+
+                } else {
+                    // Check if the SAVED position (currently in xOffset/yOffset) is within current bounds
+                    const initialClampedPos = getClampedPosition(xOffset, yOffset, container);
+                    if (initialClampedPos.clamped) {
+                        xOffset = initialClampedPos.x; // Update global offset
+                        yOffset = initialClampedPos.y;
+                        setTranslate(xOffset, yOffset, container); // Apply visual correction
+                        // Save the corrected position
+                        browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
+                            .catch(err => console.error("Failed to save initially clamped position:", err));
+                    }
+                }
+            }, 100);
+
+
+            // 10. Start Timer and Observers
             startTimer();
             observeChanges();
 
-            console.log("Bing Timer Helper Extension Loaded Successfully.");
-
+            // Add resize listener with the debounced handler (uses handleResize function)
+            window.addEventListener('resize', debounce(handleResize, 250));
         } catch (err) {
-            // Este catch ahora captura errores de storage.get o de la lógica posterior
-            console.error("Error during main initialization block:", err);
-            console.warn("Extension failed to initialize properly.");
+            console.error("Bing Search Timer: Error during main initialization block:", err);
+            console.warn("Bing Search Timer: Extension failed to initialize properly.");
+            // Consider showing an error message to the user in the UI if possible
         }
     }
 
-    // --- Ejecutar Inicialización (Añadir logs) ---
-    console.log(">>> Script End: Checking document.readyState:", document.readyState); // Log X
-     if (document.readyState === 'loading') {
-        console.log(">>> Script End: Adding DOMContentLoaded listener."); // Log Y
+    // --- Start Execution ---
+    // (Same as before: check document.readyState and call initialize)
+    if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize);
     } else {
-        console.log(">>> Script End: Document already loaded. Calling initialize directly."); // Log Z
         initialize();
     }
 
-})(); // Fin IIFE
-
-// --- Helper Functions (Copiar/Pegar de nuevo o asegurar que existen fuera del IIFE si se necesitan globalmente, aunque aquí no parece necesario) ---
-function formatTime(seconds) {
-    if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) { return "--:--"; }
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-function getRandomElement(arr) {
-    // Devolver undefined si el array es inválido para que la lógica de generación pueda manejarlo
-    if (!arr || arr.length === 0) { console.warn("getRandomElement: Received empty array."); return undefined;}
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-// Las otras funciones como generateDynamicSearch, resetTimer, etc., ya están dentro del IIFE y no necesitan estar fuera.
-function observeChanges() {
-    if (window.bingTimerObserver) { return; }
-    const observer = new MutationObserver(mutations => {
-        requestAnimationFrame(() => {
-             if (document.location.href !== lastHref) {
-                console.log(`Navigation detected: ${lastHref} -> ${document.location.href}`);
-                lastHref = document.location.href;
-                if (location.hostname.includes('bing.com') && location.pathname.startsWith('/search') && document.getElementById('bing-timer-helper')) {
-                    resetTimer(); // Resetear timer en navegación interna
-                } else if (!location.hostname.includes('bing.com')) {
-                    stopTimer(); // Detener si salimos de Bing
-                } else if (!document.getElementById('bing-timer-helper') && location.hostname.includes('bing.com') && location.pathname.startsWith('/search')) {
-                     console.warn("Navigation detected, but widget not found.");
-                     // Podríamos intentar re-inicializar aquí si fuera necesario, pero es complejo
-                }
-             }
-         });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.bingTimerObserver = observer;
-    console.log("Mutation observer started.");
-}
-function resetTimer(applyNewDuration = false) {
-    console.log("resetTimer called.");
-    secondsRemaining = TARGET_SECONDS;
-    console.log("resetTimer: secondsRemaining reset to", secondsRemaining);
-    if (container && timerDisplay) {
-         startTimer(); // Llama a startTimer que limpia el intervalo viejo
-    } else {
-        console.warn("Attempted to reset timer before interface was created.");
-    }
-}
+})(); // End of IIFE
