@@ -224,15 +224,15 @@
         if (searchInput && searchInput.value) {
             try {
                 await navigator.clipboard.writeText(searchInput.value);
-                if (copyButton) copyButton.innerHTML = 'Copied!'; // Use innerHTML for icons/text
+                if (copyButton) copyButton.textContent = 'Copied!'; // Use textContent for icons/text
                 setTimeout(() => {
-                    if (copyButton) copyButton.innerHTML = '📋'; // Restore original icon/text
+                    if (copyButton) copyButton.textContent = '📋'; // Restore original icon/text
                 }, 1500);
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                if (copyButton) copyButton.innerHTML = 'Error';
+                if (copyButton) copyButton.textContent = 'Error';
                 setTimeout(() => {
-                    if (copyButton) copyButton.innerHTML = '📋'; // Restore original icon/text
+                    if (copyButton) copyButton.textContent = '📋'; // Restore original icon/text
                 }, 1500);
             }
         } else {
@@ -659,31 +659,31 @@
 
         // --- Buttons ---
         copyButton = document.createElement('button');
-        copyButton.innerHTML = '📋'; // Icon
+        copyButton.textContent = '📋'; // Icon
         copyButton.id = 'bing-copy-button';
         copyButton.title = 'Copy the suggested search';
         // Styles applied via CSS
 
         newSearchButton = document.createElement('button');
-        newSearchButton.innerHTML = '🔄'; // Icon
+        newSearchButton.textContent = '🔄'; // Icon
         newSearchButton.id = 'bing-new-search-button';
         newSearchButton.title = 'Generate a new random search';
         // Styles applied via CSS
 
         showUsedButton = document.createElement('button');
-        showUsedButton.innerHTML = '📜'; // Icon
+        showUsedButton.textContent = '📜'; // Icon
         showUsedButton.id = 'bing-show-used-button';
         showUsedButton.title = 'Show searches suggested today';
         // Styles applied via CSS
 
         optionsButton = document.createElement('button');
-        optionsButton.innerHTML = '⚙️'; // Icon
+        optionsButton.textContent = '⚙️'; // Icon
         optionsButton.id = 'bing-options-button';
         optionsButton.title = 'Open Extension Options';
         // Styles applied via CSS
 
         pasteSearchButton = document.createElement('button');
-        pasteSearchButton.innerHTML = '⬅️'; // Or an arrow/paste icon <svg>...</svg>
+        pasteSearchButton.textContent = '⬅️'; // Or an arrow/paste icon <svg>...</svg>
         pasteSearchButton.id = 'bing-paste-search-button';
         pasteSearchButton.title = 'Paste suggestion into Bing search box';
 
@@ -893,8 +893,8 @@
         // --- Disable buttons during operation ---
         const buttonsToDisable = [copyButton, newSearchButton, showUsedButton, optionsButton, pasteSearchButton];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
-        const originalPasteIcon = pasteSearchButton ? pasteSearchButton.innerHTML : '⬅️';
-        if (pasteSearchButton) pasteSearchButton.innerHTML = '...'; // Indicate working
+        const originalPasteIcon = pasteSearchButton ? pasteSearchButton.textContent : '⬅️';
+        if (pasteSearchButton) pasteSearchButton.textContent = '...'; // Indicate working
 
         try {
             // --- Step 1: Place text in search box (Simulate or Instant) ---
@@ -932,17 +932,17 @@
 
             // Update paste button state only if search wasn't triggered (or delay it)
             if (pasteSearchButton && !autoSearchEnabled) { // Only show success if NOT navigating away
-                pasteSearchButton.innerHTML = 'Done!';
+                pasteSearchButton.textContent = 'Done!';
                 setTimeout(() => {
-                    if (pasteSearchButton) pasteSearchButton.innerHTML = originalPasteIcon;
+                    if (pasteSearchButton) pasteSearchButton.textContent = originalPasteIcon;
                 }, 1200);
             }
 
         } catch (error) {
             console.error("Error during paste/simulation/search:", error);
             alert("An error occurred while interacting with the search box.");
-            if (pasteSearchButton) pasteSearchButton.innerHTML = 'Error'; // Indicate error
-            setTimeout(() => { if (pasteSearchButton) pasteSearchButton.innerHTML = originalPasteIcon; }, 1500);
+            if (pasteSearchButton) pasteSearchButton.textContent = 'Error'; // Indicate error
+            setTimeout(() => { if (pasteSearchButton) pasteSearchButton.textContent = originalPasteIcon; }, 1500);
 
         } finally {
             // --- Re-enable buttons (unless auto-search is likely navigating away) ---
@@ -951,8 +951,8 @@
             setTimeout(() => {
                 buttonsToDisable.forEach(btn => { if (btn) btn.disabled = false; });
                 // Restore icon in case it was left as '...' or 'Done!' if auto search was on
-                if (pasteSearchButton && pasteSearchButton.innerHTML !== originalPasteIcon) {
-                    pasteSearchButton.innerHTML = originalPasteIcon;
+                if (pasteSearchButton && pasteSearchButton.textContent !== originalPasteIcon) {
+                    pasteSearchButton.textContent = originalPasteIcon;
                 }
                 console.log("Buttons re-enabled.");
             }, reEnableDelay);

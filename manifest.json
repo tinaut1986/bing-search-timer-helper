@@ -17,27 +17,29 @@
     "*://*.bing.com/*"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": [
+      "background.js"
+    ]
   },
   "content_scripts": [
     {
-      "matches": ["*://*.bing.com/search*"],
-      "js": ["content.js"],
-      "css": ["style.css"]
+      "matches": [
+        "*://*.bing.com/search*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "style.css"
+      ]
     }
   ],
-
-  // --- AÑADIR/VERIFICAR ESTA SECCIÓN ---
   "options_ui": {
     "page": "options.html",
-    "open_in_tab": true // Recomendado para esta cantidad de opciones
+    "open_in_tab": true
   },
-  // --- FIN options_ui ---
-
-  // --- AÑADIR/VERIFICAR ESTA SECCIÓN (Asegura que options.js pueda cargar defaults) ---
- "web_accessible_resources": [
+  "web_accessible_resources": [
     {
-        // Necesario para que options.js pueda hacer fetch de los defaults
       "resources": [
         "data/searchTemplates.json",
         "data/systems.json",
@@ -48,17 +50,15 @@
         "data/numbers.json",
         "data/aesthetics.json"
       ],
-      // NO necesitas matches aquí si solo options.js los carga
-      // Si content.js también los cargara, necesitarías "matches": ["*://*.bing.com/*"]
-      "use_dynamic_url": false, // Firefox no usa esto, pero Chrome sí lo prefiere
-      "matches": ["*://*.bing.com/*"] // Asegura que solo Bing pueda acceder
+      "use_dynamic_url": false,
+      "matches": [
+        "*://*.bing.com/*"
+      ]
     }
   ],
-   // --- FIN web_accessible_resources ---
-
-   "browser_specific_settings": {
+  "browser_specific_settings": {
     "gecko": {
-      "id": "bing-timer-helper@tinaut1986.example.com" // Tu ID único
+      "id": "bing-timer-helper@tinaut1986.example.com"
     }
   }
 }
