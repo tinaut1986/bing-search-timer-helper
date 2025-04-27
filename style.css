@@ -24,7 +24,7 @@
     display: flex;
     flex-direction: column;
     transform: none;
-    /* Quitar !important */
+    /* Removed !important */
 }
 
 /* === Drag Handle (Top Bar) === */
@@ -91,14 +91,15 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
-    background-color: #f0f0f0;
-    transition: background-color 0.2s ease;
+    background-color: #f0f0f0; /* Default background - will be overridden by specific rules */
+    color: #333; /* Default text color */
+    transition: background-color 0.2s ease, border-color 0.2s ease;
     font-size: 13px;
     /* Base font size */
     padding: 6px 10px;
     /* Default padding */
     margin-left: 5px;
-    /* Default margin */
+    /* Default margin for spacing */
     line-height: 1.2;
     /* Adjust line height for better icon alignment */
     vertical-align: middle;
@@ -110,60 +111,70 @@
     margin-left: 0;
 }
 
+/* Default hover for buttons that might not have a specific style (shouldn't happen here) */
 #bing-timer-helper button:hover {
     background-color: #e0e0e0;
     border-color: #bbb;
 }
 
-/* === Specific Button Styles === */
-#bing-copy-button {
-    background-color: #007bff;
-    /* Blue */
+/* === Specific Button Styles (Increased Specificity) === */
+
+/* Copy Button: Primary action */
+#bing-timer-helper #bing-copy-button { /* Increased Specificity */
+    background-color: #007bff; /* Blue */
     color: white;
     border-color: #0056b3;
 }
-
-#bing-copy-button:hover {
+#bing-timer-helper #bing-copy-button:hover { /* Increased Specificity */
     background-color: #0056b3;
+    border-color: #004085;
 }
 
-#bing-new-search-button {
-    background-color: #ffc107;
-    /* Yellow */
-    color: #212529;
-    /* Dark text for contrast */
+/* Paste Button: Success/Action related to suggestion */
+#bing-timer-helper #bing-paste-search-button { /* Increased Specificity */
+    background-color: #28a745; /* Green */
+    color: white;
+    border-color: #1e7e34;
+}
+#bing-timer-helper #bing-paste-search-button:hover { /* Increased Specificity */
+    background-color: #218838;
+    border-color: #19692c;
+}
+
+/* New Search Button: Generate/Refresh action */
+#bing-timer-helper #bing-new-search-button { /* Increased Specificity */
+    background-color: #ffc107; /* Yellow/Orange */
+    color: #212529; /* Dark text for contrast */
     border-color: #d39e00;
 }
-
-#bing-new-search-button:hover {
+#bing-timer-helper #bing-new-search-button:hover { /* Increased Specificity */
     background-color: #e0a800;
+    border-color: #b08800;
 }
 
-#bing-show-used-button {
-    background-color: #6c757d;
-    /* Gray */
+/* Show History Button: Secondary/Info action */
+#bing-timer-helper #bing-show-used-button { /* Increased Specificity */
+    background-color: #6c757d; /* Gray */
     color: white;
     border-color: #5a6268;
 }
-
-#bing-show-used-button:hover {
+#bing-timer-helper #bing-show-used-button:hover { /* Increased Specificity */
     background-color: #5a6268;
+    border-color: #4e555b;
 }
 
-#bing-options-button {
-    background-color: #17a2b8;
-    /* Teal */
+/* Options Button: Settings/Configuration */
+#bing-timer-helper #bing-options-button { /* Increased Specificity */
+    background-color: #17a2b8; /* Teal */
     color: white;
     border-color: #138496;
-    padding: 6px 8px;
-    /* Slightly less padding for icon */
-    font-size: 14px;
+    padding: 6px 8px; /* Slightly less padding for gear icon */
+    font-size: 14px; /* Slightly larger icon size */
 }
-
-#bing-options-button:hover {
+#bing-timer-helper #bing-options-button:hover { /* Increased Specificity */
     background-color: #138496;
+    border-color: #0f6674;
 }
-
 
 /* === History Modal Styles === */
 #bing-history-modal-overlay {
@@ -241,4 +252,30 @@
 
 #bing-history-modal-close:hover {
     background-color: #5a6268;
+}
+
+/* === Widget Options Styling === */
+.widget-options {
+    border-top: 1px solid #eee; /* Separator line */
+    padding-top: 10px;
+    margin-top: 10px; /* Space above options */
+    text-align: left; /* Align labels left */
+    display: flex; /* Use flex for alignment */
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping if space is tight */
+    gap: 5px 15px; /* Row gap, Column gap */
+}
+
+.widget-options label {
+    cursor: pointer;
+    user-select: none; /* Prevent selecting label text */
+    font-weight: normal; /* Override default label bold if needed */
+    color: #555;
+}
+
+.widget-options input[type="checkbox"] {
+    cursor: pointer;
+    /* Optional: make checkbox slightly larger */
+    /* width: 14px; */
+    /* height: 14px; */
 }

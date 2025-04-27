@@ -27,7 +27,11 @@
     let lastUsedDate = '';      // YYYY-MM-DD date for resetting usedSearchesToday
 
     // --- Interface Element Variables ---
-    let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton, optionsButton;
+    let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton;
+    let optionsButton, pasteSearchButton, autoSearchCheckbox, simulateTypingCheckbox, autoSearchLabel, simulateTypingLabel;
+
+    let autoSearchEnabled = false;      // Loaded/saved state
+    let simulateTypingEnabled = false;  // Loaded/saved state
 
     // --- URL Tracking Variable ---
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
@@ -632,7 +636,6 @@
         timerTitle.textContent = 'Timer:';
         timerTitle.style.fontWeight = 'bold';
         timerTitle.style.marginBottom = '5px';
-        // timerTitle.style.marginTop = '5px'; // Removed, handled by wrapper padding
 
         timerDisplay = document.createElement('div');
         timerDisplay.id = 'bing-timer-display';
@@ -679,13 +682,63 @@
         optionsButton.title = 'Open Extension Options';
         // Styles applied via CSS
 
+        pasteSearchButton = document.createElement('button');
+        pasteSearchButton.innerHTML = '⬅️'; // Or an arrow/paste icon <svg>...</svg>
+        pasteSearchButton.id = 'bing-paste-search-button';
+        pasteSearchButton.title = 'Paste suggestion into Bing search box';
+
+        // --- Checkbox Options ---
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'widget-options'; // Class for potential styling
+        optionsDiv.style.marginTop = '10px';
+        optionsDiv.style.fontSize = '12px'; // Smaller
+
+        // Auto Search Checkbox
+        autoSearchCheckbox = document.createElement('input');
+        autoSearchCheckbox.type = 'checkbox';
+        autoSearchCheckbox.id = 'bing-auto-search-check';
+        autoSearchCheckbox.checked = autoSearchEnabled; // Set initial state
+        autoSearchCheckbox.style.marginRight = '5px';
+        autoSearchCheckbox.style.verticalAlign = 'middle';
+
+        autoSearchLabel = document.createElement('label');
+        autoSearchLabel.htmlFor = 'bing-auto-search-check';
+        autoSearchLabel.textContent = 'Auto Search?';
+        autoSearchLabel.title = 'If checked, automatically performs the search after pasting.';
+        autoSearchLabel.style.cursor = 'pointer';
+        autoSearchLabel.style.marginRight = '15px'; // Space between options
+        autoSearchLabel.style.verticalAlign = 'middle';
+
+        // Simulate Typing Checkbox
+        simulateTypingCheckbox = document.createElement('input');
+        simulateTypingCheckbox.type = 'checkbox';
+        simulateTypingCheckbox.id = 'bing-simulate-typing-check';
+        simulateTypingCheckbox.checked = simulateTypingEnabled; // Set initial state
+        simulateTypingCheckbox.style.marginRight = '5px';
+        simulateTypingCheckbox.style.verticalAlign = 'middle';
+
+        simulateTypingLabel = document.createElement('label');
+        simulateTypingLabel.htmlFor = 'bing-simulate-typing-check';
+        simulateTypingLabel.textContent = 'Simulate Typing?';
+        simulateTypingLabel.title = 'If checked, types the suggestion character by character instead of pasting instantly.';
+        simulateTypingLabel.style.cursor = 'pointer';
+        simulateTypingLabel.style.verticalAlign = 'middle';
+
+        optionsDiv.appendChild(autoSearchCheckbox);
+        optionsDiv.appendChild(autoSearchLabel);
+        optionsDiv.appendChild(simulateTypingCheckbox);
+        optionsDiv.appendChild(simulateTypingLabel);
+
+
         // --- Button Group Container ---
         const buttonGroup = document.createElement('div');
         buttonGroup.className = 'button-group'; // Optional class for styling group
         buttonGroup.style.marginTop = '5px';
+        // Order of buttons matters for the :first-child CSS rule
         buttonGroup.appendChild(copyButton);
+        buttonGroup.appendChild(pasteSearchButton);
         buttonGroup.appendChild(newSearchButton);
-        buttonGroup.appendChild(showUsedButton);
+        buttonGroup.appendChild(showUsedButton)
         buttonGroup.appendChild(optionsButton);
 
         // --- Assemble Content Wrapper ---
@@ -693,6 +746,7 @@
         contentWrapper.appendChild(timerDisplay);
         contentWrapper.appendChild(searchTitle);
         contentWrapper.appendChild(searchInput);
+        contentWrapper.appendChild(optionsDiv);
         contentWrapper.appendChild(buttonGroup);
 
         // --- Assemble Main Container ---
@@ -719,6 +773,18 @@
             });
         }
 
+        if (pasteSearchButton) {
+            pasteSearchButton.addEventListener('click', pasteSuggestionToSearchBox);
+            console.log("Added click listener to pasteSearchButton.");
+        } else console.error("Failed to add click listener: pasteSearchButton is null");
+
+        if (autoSearchCheckbox) {
+            autoSearchCheckbox.addEventListener('change', handleCheckboxChange);
+        }
+        if (simulateTypingCheckbox) {
+            simulateTypingCheckbox.addEventListener('change', handleCheckboxChange);
+        }
+
         // Drag listeners
         if (dragHandle) {
             dragHandle.addEventListener('mousedown', dragStart, false);
@@ -735,6 +801,162 @@
 
         // --- Load Initial Search ---
         updateSearchDisplay();
+    }
+
+    /**
+     * Handles changes to the configuration checkboxes.
+     * Updates the corresponding global state variable and saves it to storage.
+     * @param {Event} event - The change event object from the checkbox.
+     */
+    async function handleCheckboxChange(event) {
+        if (!event.target) return;
+
+        const checkboxId = event.target.id;
+        const isChecked = event.target.checked;
+        let settingToSave = {};
+
+        if (checkboxId === 'bing-auto-search-check') {
+            autoSearchEnabled = isChecked;
+            settingToSave = { autoSearchEnabled: isChecked };
+            console.log(`Checkbox: Auto Search set to ${isChecked}`);
+        } else if (checkboxId === 'bing-simulate-typing-check') {
+            simulateTypingEnabled = isChecked;
+            settingToSave = { simulateTypingEnabled: isChecked };
+            console.log(`Checkbox: Simulate Typing set to ${isChecked}`);
+        } else {
+            return; // Unknown checkbox
+        }
+
+        // Save the new setting to storage
+        try {
+            await browser.storage.local.set(settingToSave);
+            // console.log("Checkbox setting saved.");
+        } catch (err) {
+            console.error("Error saving checkbox setting:", err);
+            // Optional: Inform user or revert checkbox state
+            // event.target.checked = !isChecked; // Revert visual state
+            // if (checkboxId === 'bing-auto-search-check') autoSearchEnabled = !isChecked; // Revert global state
+            // else if (checkboxId === 'bing-simulate-typing-check') simulateTypingEnabled = !isChecked;
+        }
+    }
+
+    /**
+     * Simulates typing text into an input field character by character.
+     * @param {HTMLInputElement} inputElement - The input field element.
+     * @param {string} textToType - The text to simulate typing.
+     * @param {number} [minDelay=50] - Minimum delay between characters (ms).
+     * @param {number} [maxDelay=150] - Maximum delay between characters (ms).
+     */
+    async function simulateTyping(inputElement, textToType, minDelay = 50, maxDelay = 150) {
+        console.log(`Simulating typing for: "${textToType}"`);
+        inputElement.value = ''; // Clear the input first
+        inputElement.focus();    // Focus on the input
+
+        for (let i = 0; i < textToType.length; i++) {
+            const char = textToType[i];
+            inputElement.value += char; // Append character
+
+            // Dispatch 'input' event after each character to mimic real typing
+            inputElement.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+
+            // Wait for a random delay
+            const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        // Dispatch 'change' event after typing is complete (optional but good practice)
+        inputElement.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+        console.log("Simulated typing complete.");
+    }
+
+    /**
+     * Pastes or simulates typing the suggestion into the Bing search box,
+     * and optionally performs the search based on checkbox settings.
+     */
+    async function pasteSuggestionToSearchBox() {
+        console.log("pasteSuggestionToSearchBox called");
+
+        const suggestionText = searchInput?.value;
+        if (!suggestionText || suggestionText.startsWith('[')) {
+            console.warn("Paste Search: No valid suggestion text.");
+            alert("No valid search suggestion to use.");
+            return;
+        }
+
+        const bingSearchBox = document.getElementById('sb_form_q');
+        if (!bingSearchBox) {
+            console.error("Paste Search: Could not find Bing search input #sb_form_q.");
+            alert("Error: Could not find the Bing search box.");
+            return;
+        }
+
+        // --- Disable buttons during operation ---
+        const buttonsToDisable = [copyButton, newSearchButton, showUsedButton, optionsButton, pasteSearchButton];
+        buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
+        const originalPasteIcon = pasteSearchButton ? pasteSearchButton.innerHTML : '⬅️';
+        if (pasteSearchButton) pasteSearchButton.innerHTML = '...'; // Indicate working
+
+        try {
+            // --- Step 1: Place text in search box (Simulate or Instant) ---
+            if (simulateTypingEnabled) {
+                await simulateTyping(bingSearchBox, suggestionText); // Await simulation
+            } else {
+                console.log("Pasting instantly...");
+                bingSearchBox.value = suggestionText;
+                // Dispatch events after instant paste
+                bingSearchBox.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                bingSearchBox.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                console.log("Instant paste complete.");
+            }
+
+            // Add a small delay after typing/pasting before potential search, feels more natural
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            // --- Step 2: Perform search if Auto Search is enabled ---
+            if (autoSearchEnabled) {
+                console.log("Auto Search enabled, attempting to click search button...");
+                const bingSearchButton = document.getElementById('sb_form_go');
+                if (bingSearchButton) {
+                    bingSearchButton.click();
+                    console.log("Search button clicked.");
+                } else {
+                    console.warn("Auto Search: Could not find search button #sb_form_go.");
+                    // Maybe try submitting the form? Less reliable.
+                    // bingSearchBox.form?.submit();
+                }
+            } else {
+                console.log("Auto Search disabled.");
+                // Optional: Focus the search box if not auto-searching
+                bingSearchBox.focus();
+            }
+
+            // Update paste button state only if search wasn't triggered (or delay it)
+            if (pasteSearchButton && !autoSearchEnabled) { // Only show success if NOT navigating away
+                pasteSearchButton.innerHTML = 'Done!';
+                setTimeout(() => {
+                    if (pasteSearchButton) pasteSearchButton.innerHTML = originalPasteIcon;
+                }, 1200);
+            }
+
+        } catch (error) {
+            console.error("Error during paste/simulation/search:", error);
+            alert("An error occurred while interacting with the search box.");
+            if (pasteSearchButton) pasteSearchButton.innerHTML = 'Error'; // Indicate error
+            setTimeout(() => { if (pasteSearchButton) pasteSearchButton.innerHTML = originalPasteIcon; }, 1500);
+
+        } finally {
+            // --- Re-enable buttons (unless auto-search is likely navigating away) ---
+            // Add a longer delay if auto-search was on, otherwise re-enable sooner
+            const reEnableDelay = autoSearchEnabled ? 1500 : 200;
+            setTimeout(() => {
+                buttonsToDisable.forEach(btn => { if (btn) btn.disabled = false; });
+                // Restore icon in case it was left as '...' or 'Done!' if auto search was on
+                if (pasteSearchButton && pasteSearchButton.innerHTML !== originalPasteIcon) {
+                    pasteSearchButton.innerHTML = originalPasteIcon;
+                }
+                console.log("Buttons re-enabled.");
+            }, reEnableDelay);
+        }
     }
 
     /**
@@ -809,7 +1031,7 @@
     function setTranslate(xPos, yPos, el) {
         if (el) {
             el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-        } // No añadir console.warn aquí para evitar ruido si el elemento aún no existe
+        } // Do not add console.warn here to avoid noise if the element does not exist yet
     }
 
     /**
@@ -820,7 +1042,7 @@
      * @returns {{x: number, y: number, clamped: boolean}} Clamped position and flag.
      */
     function getClampedPosition(targetX, targetY, element) {
-        // ... (La definición completa de getClampedPosition que te pasé antes, con sus logs si quieres) ...
+        // (Full definition of getClampedPosition provided previously, with logs if desired)
         if (!element) return { x: targetX, y: targetY, clamped: false };
         const widgetRect = element.getBoundingClientRect();
         const winWidth = document.documentElement.clientWidth || window.innerWidth;
@@ -924,7 +1146,6 @@
     async function initialize() {
 
         // 1. Load Default Data from Files first
-        // This populates defaultSearchTemplates, defaultSystems, etc., globally in this scope
         const dataLoaded = await loadDataFromFiles();
         if (!dataLoaded) {
             console.error("Bing Search Timer: Failed to load default data from files. Aborting initialization.");
@@ -934,17 +1155,17 @@
         // --- Try/Catch for Storage access and subsequent setup ---
         try {
             // 2. Load User Settings / Widget State from Storage
-            // Request keys, use 'null' as default for position to detect if it was ever saved
             const userData = await browser.storage.local.get({
                 timerTargetMinutes: DEFAULT_TARGET_MINUTES,
                 widgetPosX: null, // Use null to check if position was saved
                 widgetPosY: null,
                 lastUsedDate: '',
                 usedSearchesToday: [],
-                // Request user-configured lists, default to null if not set
                 userSearchTemplates: null, userSystems: null, userDevelopers: null,
                 userSagas: null, userGenres: null, userParts: null,
-                userNumbers: null, userAesthetics: null
+                userNumbers: null, userAesthetics: null,
+                autoSearchEnabled: false,      // Defaults to false
+                simulateTypingEnabled: false   // Defaults to false
             });
 
             // 3. Assign Settings (Timer, Date, Used Searches)
@@ -953,6 +1174,9 @@
             secondsRemaining = TARGET_SECONDS; // Set initial countdown value
             lastUsedDate = userData.lastUsedDate ?? '';
             const loadedUsedSearches = userData.usedSearchesToday ?? [];
+            autoSearchEnabled = userData.autoSearchEnabled ?? false;
+            simulateTypingEnabled = userData.simulateTypingEnabled ?? false;
+            console.log(`BST: Loaded Checkbox States: AutoSearch=${autoSearchEnabled}, SimulateTyping=${simulateTypingEnabled}`);
 
             // 4. Assign Template Lists (Use saved user data or fallback to loaded defaults)
             searchTemplates = Array.isArray(userData.userSearchTemplates) ? userData.userSearchTemplates : defaultSearchTemplates;
@@ -990,15 +1214,14 @@
             } else
                 usedSearchesToday = Array.isArray(loadedUsedSearches) ? loadedUsedSearches : [];
 
-            // 7. Validate Essential Data (Example)
+            // 7. Validate Essential Data
             if (!Array.isArray(searchTemplates) || searchTemplates.length === 0) {
                 console.error("BST: CRITICAL - No search templates available.");
                 // Consider stopping or disabling features
             }
 
             // 8. Create the UI
-            // This applies the initial transform based on xOffset/yOffset (saved or 0,0)
-            createInterface();
+            createInterface(); // Applies initial transform based on xOffset/yOffset
 
             // 9. Adjust Position if Necessary (Initial Default OR Out-of-Bounds Saved)
             // Use setTimeout to ensure the element is rendered and has dimensions
@@ -1009,38 +1232,37 @@
                 }
 
                 if (needsAdjustToRightDefault) {
-                    // Calculate the target X offset for top-right default position
+                    // Calculate default top-right position
                     const widgetRect = container.getBoundingClientRect();
 
-                    // *** NUEVA VALIDACIÓN DE DIMENSIONES ***
+                    // *** DIMENSION VALIDATION ***
                     if (!widgetRect || !widgetRect.width || widgetRect.width <= 0) {
                         console.warn(`BST: [Timeout] Cannot calculate default right pos, widget has no valid width yet. Width: ${widgetRect?.width}`);
-                        // Podrías intentar de nuevo con otro setTimeout o simplemente dejarlo en 15,15
-                        // Por ahora, lo dejaremos donde está (15,15 relativo) si no hay ancho.
-                        // Opcionalmente, guardar (0,0) como indicación de posición desconocida?
+                        // You could try again with another setTimeout or simply leave it at 15,15
+                        // For now, we'll leave it where it is (relative 15,15) if there's no width.
+                        // Optionally, save (0,0) as an indication of unknown position?
                         // browser.storage.local.set({ widgetPosX: 0, widgetPosY: 0 }).catch(err => console.error("Failed to save zero position:", err));
-                        return; // Salir si no hay ancho
+                        return; // Exit if there's no width
                     }
-                    // *** FIN VALIDACIÓN ***
+                    // *** END VALIDATION ***
 
                     const winWidth = document.documentElement.clientWidth || window.innerWidth;
-                    const margin = 15; // Target margin from the right edge
-                    const targetX = winWidth - widgetRect.width - margin; // Calculate target X offset
-                    const targetY = 15; // Target Y offset (same as CSS top)
+                    const margin = 15;
+                    const targetX = winWidth - widgetRect.width - margin;
+                    const targetY = 15;
 
-                    // Clamp the calculated default position
-                    const clampedPos = getClampedPosition(targetX, targetY, container); // getClampedPosition ya loguea internamente
+                    const clampedPos = getClampedPosition(targetX, targetY, container); // getClampedPosition already logs internally
 
-                    xOffset = clampedPos.x; // Actualizar global
+                    xOffset = clampedPos.x; // Update global
                     yOffset = clampedPos.y;
-                    setTranslate(xOffset, yOffset, container); // Aplicar visual update
+                    setTranslate(xOffset, yOffset, container); // Apply visual update
 
-                    // Save this calculated default position so it's remembered
+                    // Save this calculated default position
                     browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
                         .catch(err => console.error("Failed to save initial default right position:", err));
 
                 } else {
-                    // Check if the SAVED position (currently in xOffset/yOffset) is within current bounds
+                    // Check if the SAVED position is within current bounds
                     const initialClampedPos = getClampedPosition(xOffset, yOffset, container);
                     if (initialClampedPos.clamped) {
                         xOffset = initialClampedPos.x; // Update global offset
@@ -1051,24 +1273,21 @@
                             .catch(err => console.error("Failed to save initially clamped position:", err));
                     }
                 }
-            }, 100);
-
+            }, 100); // Delay ensures element is rendered and has dimensions
 
             // 10. Start Timer and Observers
             startTimer();
             observeChanges();
 
-            // Add resize listener with the debounced handler (uses handleResize function)
+            // Add resize listener
             window.addEventListener('resize', debounce(handleResize, 250));
         } catch (err) {
             console.error("Bing Search Timer: Error during main initialization block:", err);
             console.warn("Bing Search Timer: Extension failed to initialize properly.");
-            // Consider showing an error message to the user in the UI if possible
         }
     }
 
     // --- Start Execution ---
-    // (Same as before: check document.readyState and call initialize)
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize);
     } else {
