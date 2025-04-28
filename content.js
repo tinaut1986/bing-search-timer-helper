@@ -224,7 +224,7 @@
         if (searchInput && searchInput.value) {
             try {
                 await navigator.clipboard.writeText(searchInput.value);
-                if (copyButton) copyButton.textContent = 'Copied!'; // Use textContent for icons/text
+                if (copyButton) copyButton.textContent = t('copiedFeedback'); // Use textContent for icons/text
                 setTimeout(() => {
                     if (copyButton) copyButton.textContent = '📋'; // Restore original icon/text
                 }, 1500);
@@ -246,8 +246,8 @@
     function sendNotification() {
         browser.runtime.sendMessage({
             type: "showNotification",
-            title: "Time's Up!",
-            message: `You've reached your goal of ${TARGET_MINUTES} minutes on Bing search.`
+            title: t('notifTimeUpTitle'),
+            message: t('notifTimeUpBody', [TARGET_MINUTES])
         }).catch(err => {
             console.error("Error sending notification message:", err);
             // Fallback alert if messaging fails
@@ -571,13 +571,13 @@
         const modalContent = document.createElement('div');
         modalContent.id = 'bing-history-modal-content';
         const title = document.createElement('h2');
-        title.textContent = 'Searches Suggested Today';
+        title.textContent = t('modalTitle');
         const list = document.createElement('ul');
         list.id = 'bing-history-list';
 
         if (usedSearchesToday.length === 0) {
             const emptyItem = document.createElement('li');
-            emptyItem.textContent = "No searches suggested yet.";
+            emptyItem.textContent = t('modalEmpty');
             emptyItem.style.fontStyle = 'italic';
             list.appendChild(emptyItem);
         } else {
@@ -590,7 +590,7 @@
 
         const closeButton = document.createElement('button');
         closeButton.id = 'bing-history-modal-close';
-        closeButton.textContent = 'Close';
+        closeButton.textContent = t('modalClose');
         closeButton.onclick = () => {
             overlay.style.display = 'none';
             overlay.remove();
@@ -625,7 +625,7 @@
         // --- Drag Handle ---
         dragHandle = document.createElement('div');
         dragHandle.id = 'bing-timer-drag-handle';
-        dragHandle.textContent = 'Drag';
+        dragHandle.textContent = t('dragHandle');
 
         // --- Content Wrapper ---
         const contentWrapper = document.createElement('div');
@@ -633,7 +633,7 @@
 
         // --- Elements inside Content Wrapper ---
         timerTitle = document.createElement('div');
-        timerTitle.textContent = 'Timer:';
+        timerTitle.textContent = t('timerTitle');
         timerTitle.style.fontWeight = 'bold';
         timerTitle.style.marginBottom = '5px';
 
@@ -644,7 +644,7 @@
         timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
 
         searchTitle = document.createElement('div');
-        searchTitle.textContent = 'Suggested Search:';
+        searchTitle.textContent = t('suggestedSearchTitle');
         searchTitle.style.fontWeight = 'bold';
         searchTitle.style.marginTop = '15px';
         searchTitle.style.marginBottom = '5px';
@@ -661,31 +661,31 @@
         copyButton = document.createElement('button');
         copyButton.textContent = '📋'; // Icon
         copyButton.id = 'bing-copy-button';
-        copyButton.title = 'Copy the suggested search';
+        copyButton.title = t('btnCopy');
         // Styles applied via CSS
 
         newSearchButton = document.createElement('button');
         newSearchButton.textContent = '🔄'; // Icon
         newSearchButton.id = 'bing-new-search-button';
-        newSearchButton.title = 'Generate a new random search';
+        newSearchButton.title = t('btnNew');
         // Styles applied via CSS
 
         showUsedButton = document.createElement('button');
         showUsedButton.textContent = '📜'; // Icon
         showUsedButton.id = 'bing-show-used-button';
-        showUsedButton.title = 'Show searches suggested today';
+        showUsedButton.title = t('btnHistory');
         // Styles applied via CSS
 
         optionsButton = document.createElement('button');
         optionsButton.textContent = '⚙️'; // Icon
         optionsButton.id = 'bing-options-button';
-        optionsButton.title = 'Open Extension Options';
+        optionsButton.title = t('btnOptions');
         // Styles applied via CSS
 
         pasteSearchButton = document.createElement('button');
         pasteSearchButton.textContent = '⬅️'; // Or an arrow/paste icon <svg>...</svg>
         pasteSearchButton.id = 'bing-paste-search-button';
-        pasteSearchButton.title = 'Paste suggestion into Bing search box';
+        pasteSearchButton.title = t('btnPaste');
 
         // --- Checkbox Options ---
         const optionsDiv = document.createElement('div');
@@ -703,7 +703,7 @@
 
         autoSearchLabel = document.createElement('label');
         autoSearchLabel.htmlFor = 'bing-auto-search-check';
-        autoSearchLabel.textContent = 'Auto Search?';
+        autoSearchLabel.textContent = t('chkAutoSearch');
         autoSearchLabel.title = 'If checked, automatically performs the search after pasting.';
         autoSearchLabel.style.cursor = 'pointer';
         autoSearchLabel.style.marginRight = '15px'; // Space between options
@@ -719,7 +719,7 @@
 
         simulateTypingLabel = document.createElement('label');
         simulateTypingLabel.htmlFor = 'bing-simulate-typing-check';
-        simulateTypingLabel.textContent = 'Simulate Typing?';
+        simulateTypingLabel.textContent = t('chkSimulateTyping');
         simulateTypingLabel.title = 'If checked, types the suggestion character by character instead of pasting instantly.';
         simulateTypingLabel.style.cursor = 'pointer';
         simulateTypingLabel.style.verticalAlign = 'middle';
@@ -768,8 +768,11 @@
 
         if (optionsButton) {
             optionsButton.addEventListener('click', () => {
-                browser.runtime.sendMessage({ type: "openOptionsPage" })
-                    .catch(err => console.error("Error sending openOptionsPage message:", err));
+                const locale = (browser.i18n.getUILanguage() || 'en').split('-')[0];
+                browser.runtime.sendMessage({
+                    type: "openOptionsPage",
+                    locale  // «es», «en», «ca», «pt»…
+                }).catch(err => console.error("Error sending openOptionsPage message:", err));
             });
         }
 
@@ -1096,47 +1099,84 @@
     // ====================================
 
     /**
+     * Gets the localized data path for a given file.
+     * @param {string} file - The name of the file to get the path for.
+     * @returns {string} The full URL to the localized data file.
+     */
+    function getDataPath(file) {
+        const locale = (browser.i18n.getUILanguage() || 'en').split('-')[0]; // 'es', 'en'
+        return browser.runtime.getURL(`data/${locale}/${file}`);
+    }
+
+    async function smartFetchJson(localeFile, fallbackFile) {
+        try {
+            const res = await fetch(browser.runtime.getURL(localeFile));
+            if (res.ok) {
+                return await res.json();
+            } else {
+                console.warn(`⚠️ Locale file not found: ${localeFile}. Trying fallback...`);
+            }
+        } catch (err) {
+            console.warn(`⚠️ Fetch failed for locale ${localeFile}. Trying fallback...`, err);
+        }
+    
+        try {
+            const fallbackRes = await fetch(browser.runtime.getURL(fallbackFile));
+            if (fallbackRes.ok) {
+                console.info(`✅ Fallback loaded: ${fallbackFile}`);
+                return await fallbackRes.json();
+            } else {
+                console.error(`❌ Fallback also failed: ${fallbackFile}`);
+                return [];
+            }
+        } catch (err) {
+            console.error(`❌ Fetch failed for fallback ${fallbackFile}`, err);
+            return [];
+        }
+    }
+
+    /**
      * Loads default data lists from packaged JSON files.
      * @returns {Promise<boolean>} True if successful, false otherwise.
      */
     async function loadDataFromFiles() {
         try {
-            const urls = {
-                templates: browser.runtime.getURL('data/searchTemplates.json'),
-                systems: browser.runtime.getURL('data/systems.json'),
-                developers: browser.runtime.getURL('data/developers.json'),
-                parts: browser.runtime.getURL('data/parts.json'),
-                aesthetics: browser.runtime.getURL('data/aesthetics.json'),
-                genres: browser.runtime.getURL('data/genres.json'),
-                sagas: browser.runtime.getURL('data/sagas.json'),
-                numbers: browser.runtime.getURL('data/numbers.json'),
-            };
-
-            const responses = await Promise.all(Object.values(urls).map(url => fetch(url)));
-
-            for (const res of responses) {
-                if (!res.ok) throw new Error(`Failed to fetch ${res.url} (Status: ${res.status})`);
-            }
-
-            const jsonData = await Promise.all(responses.map(res => res.json()));
-
-            if (jsonData.length !== 8)
-                throw new Error(`Expected 8 data arrays, got ${jsonData.length}`);
-
-            // Assign to the specific default variables
+            const locale = (browser.i18n.getUILanguage() || 'en').split('-')[0];
+    
+            const files = [
+                'searchTemplates.json',
+                'systems.json',
+                'developers.json',
+                'parts.json',
+                'aesthetics.json',
+                'genres.json',
+                'sagas.json',
+                'numbers.json'
+            ];
+    
+            const datasets = await Promise.all(
+                files.map(file =>
+                    smartFetchJson(`data/${locale}/${file}`, `data/en/${file}`)
+                )
+            );
+    
             [
-                defaultSearchTemplates, defaultSystems, defaultDevelopers,
-                defaultParts, defaultAesthetics, defaultGenres,
-                defaultSagas, defaultNumbers
-            ] = jsonData;
-
-            return true; // Success
-
+                defaultSearchTemplates,
+                defaultSystems,
+                defaultDevelopers,
+                defaultParts,
+                defaultAesthetics,
+                defaultGenres,
+                defaultSagas,
+                defaultNumbers
+            ] = datasets;
+    
+            return true;
         } catch (error) {
-            console.error("loadDataFromFiles: ERROR caught:", error);
-            return false; // Failure
+            console.error("loadDataFromFiles: Unexpected error:", error);
+            return false;
         }
-    }
+    }    
 
     /**
      * Main initialization function for the content script.
@@ -1147,8 +1187,9 @@
 
         // 1. Load Default Data from Files first
         const dataLoaded = await loadDataFromFiles();
+
         if (!dataLoaded) {
-            console.error("Bing Search Timer: Failed to load default data from files. Aborting initialization.");
+            console.error("Bing Search Timer: Failed to load data. Aborting initialization.");
             return; // Stop if essential defaults failed to load
         }
 

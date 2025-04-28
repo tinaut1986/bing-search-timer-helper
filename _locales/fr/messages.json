@@ -1,0 +1,95 @@
+{
+  "extensionName": {
+    "message": "Bing Search Timer & Helper"
+  },
+  "extensionDescription": {
+    "message": "Reste concentré en accumulant des Microsoft Rewards et génère des idées de recherche amusantes."
+  },
+  "timerTitle": {
+    "message": "Minuteur :"
+  },
+  "suggestedSearchTitle": {
+    "message": "Recherche suggérée :"
+  },
+  "dragHandle": {
+    "message": "Déplacer"
+  },
+  "btnCopy": {
+    "message": "Copier la recherche suggérée"
+  },
+  "btnNew": {
+    "message": "Générer une nouvelle recherche aléatoire"
+  },
+  "btnHistory": {
+    "message": "Afficher les recherches suggérées aujourd’hui"
+  },
+  "btnOptions": {
+    "message": "Ouvrir les options de l’extension"
+  },
+  "btnPaste": {
+    "message": "Coller dans la barre de recherche Bing"
+  },
+  "chkAutoSearch": {
+    "message": "Recherche auto ?"
+  },
+  "chkSimulateTyping": {
+    "message": "Simuler la frappe ?"
+  },
+  "modalTitle": {
+    "message": "Recherches suggérées aujourd’hui"
+  },
+  "modalEmpty": {
+    "message": "Aucune recherche suggérée pour l’instant."
+  },
+  "modalClose": {
+    "message": "Fermer"
+  },
+  "optionsTitle": {
+    "message": "Bing Search Timer & Helper – Options"
+  },
+  "optionsIntro": {
+    "message": "Modifiez les listes utilisées pour générer des recherches aléatoires. Une entrée par ligne."
+  },
+  "lblTemplates": {
+    "message": "Modèles de recherche (%PLACEHOLDER%):"
+  },
+  "lblSystems": {
+    "message": "Systèmes/Consoles (%SYSTEM%):"
+  },
+  "lblDevelopers": {
+    "message": "Développeurs (%DEVELOPER%):"
+  },
+  "lblSagas": {
+    "message": "Sagas (%SAGA%):"
+  },
+  "lblGenres": {
+    "message": "Genres (%GENRE%):"
+  },
+  "lblParts": {
+    "message": "Parties/Nombres (%PART%):"
+  },
+  "lblNumbers": {
+    "message": "Nombres courants (%NUMBER%):"
+  },
+  "lblAesthetics": {
+    "message": "Esthétiques (%AESTHETIC%):"
+  },
+  "btnSave": {
+    "message": "Enregistrer les modifications"
+  },
+  "btnReset": {
+    "message": "Restaurer les valeurs par défaut"
+  },
+  "msgSaved": {
+    "message": "Options enregistrées avec succès."
+  },
+  "msgRestored": {
+    "message": "Valeurs par défaut restaurées."
+  },
+  "confirmRestoreDefaults": {
+    "message": "Voulez-vous vraiment rétablir les valeurs par défaut ? Vos modifications seront perdues."
+  },
+  "copiedFeedback": {
+    "message": "Copié!"
+  }
+}

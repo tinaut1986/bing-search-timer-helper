@@ -1,0 +1,95 @@
+{
+  "extensionName": {
+    "message": "Bing Search Timer & Helper"
+  },
+  "extensionDescription": {
+    "message": "Mantén-te centrat mentre guanyes Microsoft Rewards i genera idees de cerca divertides."
+  },
+  "timerTitle": {
+    "message": "Temporitzador:"
+  },
+  "suggestedSearchTitle": {
+    "message": "Cerca suggerida:"
+  },
+  "dragHandle": {
+    "message": "Arrossega"
+  },
+  "btnCopy": {
+    "message": "Copia la cerca suggerida"
+  },
+  "btnNew": {
+    "message": "Genera una nova cerca aleatòria"
+  },
+  "btnHistory": {
+    "message": "Mostra les cerques suggerides avui"
+  },
+  "btnOptions": {
+    "message": "Obre les opcions de l’extensió"
+  },
+  "btnPaste": {
+    "message": "Enganxa al quadre de cerca de Bing"
+  },
+  "chkAutoSearch": {
+    "message": "Cerca automàtica?"
+  },
+  "chkSimulateTyping": {
+    "message": "Simular escriptura?"
+  },
+  "modalTitle": {
+    "message": "Cerques suggerides avui"
+  },
+  "modalEmpty": {
+    "message": "Encara no hi ha cerques suggerides."
+  },
+  "modalClose": {
+    "message": "Tanca"
+  },
+  "optionsTitle": {
+    "message": "Bing Search Timer & Helper – Opcions"
+  },
+  "optionsIntro": {
+    "message": "Edita les llistes utilitzades per generar cerques aleatòries. Una entrada per línia."
+  },
+  "lblTemplates": {
+    "message": "Plantilles de cerca (%PLACEHOLDER%):"
+  },
+  "lblSystems": {
+    "message": "Sistemes/Consoles (%SYSTEM%):"
+  },
+  "lblDevelopers": {
+    "message": "Desenvolupadores (%DEVELOPER%):"
+  },
+  "lblSagas": {
+    "message": "Sagues (%SAGA%):"
+  },
+  "lblGenres": {
+    "message": "Gèneres (%GENRE%):"
+  },
+  "lblParts": {
+    "message": "Parts/Nombres (%PART%):"
+  },
+  "lblNumbers": {
+    "message": "Nombres comuns (%NUMBER%):"
+  },
+  "lblAesthetics": {
+    "message": "Estètiques (%AESTHETIC%):"
+  },
+  "btnSave": {
+    "message": "Desa els canvis"
+  },
+  "btnReset": {
+    "message": "Restaura els valors per defecte"
+  },
+  "msgSaved": {
+    "message": "Opcions desades correctament."
+  },
+  "msgRestored": {
+    "message": "Valors per defecte restaurats."
+  },
+  "confirmRestoreDefaults": {
+    "message": "Segur que vols restaurar els valors per defecte? Perdràs els teus canvis."
+  },
+  "copiedFeedback": {
+    "message": "Copiat!"
+  }
+}

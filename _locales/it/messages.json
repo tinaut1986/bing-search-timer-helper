@@ -1,0 +1,95 @@
+{
+  "extensionName": {
+    "message": "Bing Search Timer & Helper"
+  },
+  "extensionDescription": {
+    "message": "Rimani concentrato mentre accumuli Microsoft Rewards e genera idee di ricerca divertenti."
+  },
+  "timerTitle": {
+    "message": "Timer:"
+  },
+  "suggestedSearchTitle": {
+    "message": "Ricerca suggerita:"
+  },
+  "dragHandle": {
+    "message": "Trascina"
+  },
+  "btnCopy": {
+    "message": "Copia la ricerca suggerita"
+  },
+  "btnNew": {
+    "message": "Genera una nuova ricerca casuale"
+  },
+  "btnHistory": {
+    "message": "Mostra le ricerche suggerite oggi"
+  },
+  "btnOptions": {
+    "message": "Apri opzioni estensione"
+  },
+  "btnPaste": {
+    "message": "Incolla nel campo di ricerca di Bing"
+  },
+  "chkAutoSearch": {
+    "message": "Ricerca automatica?"
+  },
+  "chkSimulateTyping": {
+    "message": "Simula digitazione?"
+  },
+  "modalTitle": {
+    "message": "Ricerche suggerite oggi"
+  },
+  "modalEmpty": {
+    "message": "Nessuna ricerca suggerita."
+  },
+  "modalClose": {
+    "message": "Chiudi"
+  },
+  "optionsTitle": {
+    "message": "Bing Search Timer & Helper – Opzioni"
+  },
+  "optionsIntro": {
+    "message": "Modifica gli elenchi usati per generare ricerche casuali. Una voce per riga."
+  },
+  "lblTemplates": {
+    "message": "Template di ricerca (%PLACEHOLDER%):"
+  },
+  "lblSystems": {
+    "message": "Sistemi/Console (%SYSTEM%):"
+  },
+  "lblDevelopers": {
+    "message": "Sviluppatori (%DEVELOPER%):"
+  },
+  "lblSagas": {
+    "message": "Saga (%SAGA%):"
+  },
+  "lblGenres": {
+    "message": "Generi (%GENRE%):"
+  },
+  "lblParts": {
+    "message": "Parti/Numeri (%PART%):"
+  },
+  "lblNumbers": {
+    "message": "Numeri comuni (%NUMBER%):"
+  },
+  "lblAesthetics": {
+    "message": "Estetiche (%AESTHETIC%):"
+  },
+  "btnSave": {
+    "message": "Salva modifiche"
+  },
+  "btnReset": {
+    "message": "Ripristina predefiniti"
+  },
+  "msgSaved": {
+    "message": "Opzioni salvate con successo."
+  },
+  "msgRestored": {
+    "message": "Valori predefiniti ripristinati."
+  },
+  "confirmRestoreDefaults": {
+    "message": "Sei sicuro di voler ripristinare tutti i valori predefiniti? Le tue modifiche andranno perse."
+  },
+  "copiedFeedback": {
+    "message": "Copiato!"
+  }
+}

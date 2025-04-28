@@ -1,0 +1,95 @@
+{
+  "extensionName": {
+    "message": "Bing Search Timer & Helper"
+  },
+  "extensionDescription": {
+    "message": "Stay on‑track while farming Microsoft Rewards and generate fun search ideas."
+  },
+  "timerTitle": {
+    "message": "Timer:"
+  },
+  "suggestedSearchTitle": {
+    "message": "Suggested Search:"
+  },
+  "dragHandle": {
+    "message": "Drag"
+  },
+  "btnCopy": {
+    "message": "Copy the suggested search"
+  },
+  "btnNew": {
+    "message": "Generate a new random search"
+  },
+  "btnHistory": {
+    "message": "Show searches suggested today"
+  },
+  "btnOptions": {
+    "message": "Open Extension Options"
+  },
+  "btnPaste": {
+    "message": "Paste suggestion into Bing search box"
+  },
+  "chkAutoSearch": {
+    "message": "Auto Search?"
+  },
+  "chkSimulateTyping": {
+    "message": "Simulate Typing?"
+  },
+  "modalTitle": {
+    "message": "Searches Suggested Today"
+  },
+  "modalEmpty": {
+    "message": "No searches suggested yet."
+  },
+  "modalClose": {
+    "message": "Close"
+  },
+  "optionsTitle": {
+    "message": "Bing Search Timer & Helper – Options"
+  },
+  "optionsIntro": {
+    "message": "Edit the lists used to generate random searches. One entry per line."
+  },
+  "lblTemplates": {
+    "message": "Search Templates (%PLACEHOLDER%):"
+  },
+  "lblSystems": {
+    "message": "Systems/Consoles (%SYSTEM%):"
+  },
+  "lblDevelopers": {
+    "message": "Developers (%DEVELOPER%):"
+  },
+  "lblSagas": {
+    "message": "Sagas (%SAGA%):"
+  },
+  "lblGenres": {
+    "message": "Genres (%GENRE%):"
+  },
+  "lblParts": {
+    "message": "Parts/Numbers (%PART%):"
+  },
+  "lblNumbers": {
+    "message": "Common Numbers (%NUMBER%):"
+  },
+  "lblAesthetics": {
+    "message": "Aesthetics (%AESTHETIC%):"
+  },
+  "btnSave": {
+    "message": "Save Changes"
+  },
+  "btnReset": {
+    "message": "Restore Defaults"
+  },
+  "msgSaved": {
+    "message": "Options saved successfully."
+  },
+  "msgRestored": {
+    "message": "Default values restored."
+  },
+  "confirmRestoreDefaults": {
+    "message": "Are you sure you want to restore all default values? Your custom changes will be lost."
+  },
+  "copiedFeedback": {
+    "message": "Copied!"
+  }
+}

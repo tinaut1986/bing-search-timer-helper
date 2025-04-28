@@ -1,0 +1,95 @@
+  {
+    "extensionName": {
+      "message": "Temporizador & Ayudante de Búsquedas Bing"
+    },
+    "extensionDescription": {
+      "message": "Mantén el ritmo mientras farmeas Microsoft Rewards y genera búsquedas divertidas."
+    },
+    "timerTitle": {
+      "message": "Temporizador:"
+    },
+    "suggestedSearchTitle": {
+      "message": "Búsqueda Sugerida:"
+    },
+    "dragHandle": {
+      "message": "Mover"
+    },
+    "btnCopy": {
+      "message": "Copiar la búsqueda sugerida"
+    },
+    "btnNew": {
+      "message": "Generar otra búsqueda aleatoria"
+    },
+    "btnHistory": {
+      "message": "Mostrar búsquedas sugeridas hoy"
+    },
+    "btnOptions": {
+      "message": "Abrir opciones de la extensión"
+    },
+    "btnPaste": {
+      "message": "Pegar sugerencia en el cuadro de búsqueda"
+    },
+    "chkAutoSearch": {
+      "message": "¿Buscar automáticamente?"
+    },
+    "chkSimulateTyping": {
+      "message": "¿Simular tecleo?"
+    },
+    "modalTitle": {
+      "message": "Búsquedas Sugeridas Hoy"
+    },
+    "modalEmpty": {
+      "message": "Aún no se han sugerido búsquedas."
+    },
+    "modalClose": {
+      "message": "Cerrar"
+    },
+    "optionsTitle": {
+      "message": "Opciones de Bing Search Timer & Helper"
+    },
+    "optionsIntro": {
+      "message": "Edita las listas usadas para generar búsquedas aleatorias. Una entrada por línea."
+    },
+    "lblTemplates": {
+      "message": "Plantillas de Búsqueda (%PLACEHOLDER%):"
+    },
+    "lblSystems": {
+      "message": "Sistemas/Consolas (%SYSTEM%):"
+    },
+    "lblDevelopers": {
+      "message": "Desarrolladoras (%DEVELOPER%):"
+    },
+    "lblSagas": {
+      "message": "Sagas (%SAGA%):"
+    },
+    "lblGenres": {
+      "message": "Géneros (%GENRE%):"
+    },
+    "lblParts": {
+      "message": "Partes/Números (%PART%):"
+    },
+    "lblNumbers": {
+      "message": "Números Comunes (%NUMBER%):"
+    },
+    "lblAesthetics": {
+      "message": "Estéticas (%AESTHETIC%):"
+    },
+    "btnSave": {
+      "message": "Guardar Cambios"
+    },
+    "btnReset": {
+      "message": "Restaurar Valores por Defecto"
+    },
+    "msgSaved": {
+      "message": "Opciones guardadas correctamente."
+    },
+    "msgRestored": {
+      "message": "Valores por defecto restaurados."
+    },
+    "confirmRestoreDefaults": {
+      "message": "¿Seguro que quieres restaurar los valores por defecto? Perderás tus cambios."
+    },
+    "copiedFeedback": {
+      "message": "¡Copiado!"
+    }
+  }

@@ -18,7 +18,12 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Handle request to open the extension's options page
   else if (request.type === "openOptionsPage") {
     // console.log("Background: Received request to open options page.");
-    browser.runtime.openOptionsPage(); // API to open the options page
+    const url = request.locale
+      ? browser.runtime.getURL(`options.html?lang=${request.locale}`)
+      : browser.runtime.getURL("options.html");
+
+    browser.tabs.create({ url })
+      .catch(err => console.error("BG: cannot open options tab", err));
     // Indicate that we won't be sending an asynchronous response
     return false;
   }
