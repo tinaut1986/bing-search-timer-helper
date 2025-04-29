@@ -91,5 +91,11 @@
   },
   "copiedFeedback": {
     "message": "Copiato!"
+  },
+  "notifTimeUpTitle": {
+    "message": "Tempo scaduto!"
+  },
+  "notifTimeUpBody": {
+    "message": "Hai raggiunto il tuo obiettivo di $1 minuti."
   }
 }

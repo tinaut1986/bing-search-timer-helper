@@ -91,5 +91,11 @@
   },
   "copiedFeedback": {
     "message": "Copiat!"
+  },
+  "notifTimeUpTitle": {
+    "message": "Temps esgotat!"
+  },
+  "notifTimeUpBody": {
+    "message": "Has assolit el teu objectiu de $1 minuts."
   }
 }

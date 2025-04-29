@@ -91,5 +91,11 @@
   },
   "copiedFeedback": {
     "message": "Copied!"
+  },
+  "notifTimeUpTitle": {
+    "message": "Time's Up!"
+  },
+  "notifTimeUpBody": {
+    "message": "You've reached your goal of $1 minutes."
   }
 }

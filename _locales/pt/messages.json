@@ -91,5 +91,11 @@
   },
   "copiedFeedback": {
     "message": "Copiado!"
+  },
+  "notifTimeUpTitle": {
+    "message": "Tempo esgotado!"
+  },
+  "notifTimeUpBody": {
+    "message": "Você atingiu sua meta de $1 minutos."
   }
 }
