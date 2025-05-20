@@ -12,7 +12,7 @@
     // --- Timer State Variables ---
     let TARGET_MINUTES;        // Current timer goal (loaded from storage or default)
     let TARGET_SECONDS;        // Current timer goal in seconds
-    let secondsRemaining;      // Current countdown value
+    let timerStartTime = null; // Timestamp when the timer was started
     let timerInterval = null;  // Holds the interval ID for the timer
     let timerActive = false;   // Is the timer currently running?
 
@@ -259,12 +259,15 @@
      * Updates the timer display and applies color coding. Called every second by setInterval.
      */
     function updateTimer() {
-        if (typeof secondsRemaining !== 'number' || isNaN(secondsRemaining)) {
-            console.error("updateTimer: secondsRemaining is invalid:", secondsRemaining);
-            stopTimer(); return;
+        if (!timerStartTime) {
+            console.error("updateTimer: timerStartTime is not set");
+            stopTimer();
+            return;
         }
 
-        secondsRemaining--;
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - timerStartTime) / 1000);
+        const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
 
         if (timerDisplay) {
             timerDisplay.textContent = formatTime(secondsRemaining);
@@ -279,7 +282,8 @@
             }
         } else {
             console.warn("updateTimer: timerDisplay element not found, stopping timer.");
-            stopTimer(); return;
+            stopTimer(); 
+            return;
         }
 
         if (secondsRemaining <= 0) {
@@ -323,51 +327,31 @@
     }
 
     /**
+     * Resets the timer countdown to the target duration and starts it.
+     */
+    function resetTimer() {
+        stopTimer();
+        if (timerDisplay) {
+            timerDisplay.textContent = formatTime(TARGET_SECONDS);
+            timerDisplay.style.color = '#28a745'; // Reset to green
+        }
+    }
+
+    /**
      * Starts the timer interval if not already active and time > 0.
      * Sets the initial display text and color.
      */
     function startTimer() {
-        if (typeof secondsRemaining === 'undefined' || isNaN(secondsRemaining)) {
-            console.warn("startTimer: Cannot start, secondsRemaining invalid:", secondsRemaining);
-            return;
-        }
+        if (timerActive || TARGET_SECONDS <= 0) return;
 
-        // Clear any existing interval to prevent duplicates
-        if (timerInterval !== null) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
+        // Set the start time to now
+        timerStartTime = Date.now();
+        
+        if (timerInterval) clearInterval(timerInterval);
 
-        if (!timerActive && secondsRemaining > 0) {
-            timerActive = true;
-            if (timerDisplay) {
-                timerDisplay.textContent = formatTime(secondsRemaining);
-                timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
-
-                // Set initial color based on remaining time
-                if (secondsRemaining >= TARGET_SECONDS - TIMER_INITIAL_RED_DURATION) {
-                    timerDisplay.style.color = 'red';
-                } else {
-                    timerDisplay.style.color = '#28a745';
-                }
-
-                timerInterval = setInterval(updateTimer, 1000);
-            } else {
-                console.warn("startTimer: timerDisplay not found, cannot start.");
-                timerActive = false;
-            }
-        } else if (secondsRemaining <= 0) {
-            if (timerDisplay) { // Ensure goal state is shown
-                timerDisplay.textContent = "Goal!";
-                timerDisplay.style.color = 'red';
-                timerDisplay.title = `Goal reached! (${TARGET_MINUTES} min). Click to change duration.`;
-            }
-            timerActive = false;
-        } else {
-            if (timerDisplay) { // Update title in case config changed while active
-                timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
-            }
-        }
+        timerActive = true;
+        timerInterval = setInterval(updateTimer, 200); // More frequent updates for smoother display
+        updateTimer(); // Initial update
     }
 
     /**
@@ -375,29 +359,16 @@
      * @param {boolean} [goalReached=false] - If true, sets display to "Goal!" state.
      */
     function stopTimer(goalReached = false) {
-        if (timerInterval !== null) {
+        if (timerInterval) {
             clearInterval(timerInterval);
-            timerInterval = null; // Clear the interval ID
+            timerInterval = null;
         }
-        timerActive = false; // Set state to inactive
-        if (goalReached && timerDisplay) {
-            timerDisplay.textContent = "Goal!";
-            timerDisplay.style.color = 'red';
-            timerDisplay.title = `Goal reached! (${TARGET_MINUTES} min). Click to change duration.`;
-        }
-        // If not goal reached, the display just stops updating
-    }
+        timerActive = false;
+        timerStartTime = null;
 
-    /**
-     * Resets the timer countdown to the target duration and starts it.
-     */
-    function resetTimer() {
-        // Stop is implicitly handled by startTimer clearing the old interval
-        secondsRemaining = TARGET_SECONDS; // Reset countdown
-        if (container && timerDisplay) {
-            startTimer(); // Start timer (will handle clearing old interval)
-        } else {
-            console.warn("Attempted to reset timer before interface was created.");
+        if (goalReached && timerDisplay) {
+            timerDisplay.textContent = "¡Objetivo!";
+            timerDisplay.style.color = 'red';
         }
     }
 
@@ -639,7 +610,8 @@
 
         timerDisplay = document.createElement('div');
         timerDisplay.id = 'bing-timer-display';
-        timerDisplay.textContent = formatTime(secondsRemaining); // Use initial value
+        // Mostrar tiempo inicial basado en TARGET_SECONDS
+        timerDisplay.textContent = formatTime(TARGET_SECONDS);
         timerDisplay.style.cursor = 'pointer';
         timerDisplay.title = `Click to change duration (${TARGET_MINUTES} min)`;
 
@@ -778,8 +750,7 @@
 
         if (pasteSearchButton) {
             pasteSearchButton.addEventListener('click', pasteSuggestionToSearchBox);
-            console.log("Added click listener to pasteSearchButton.");
-        } else console.error("Failed to add click listener: pasteSearchButton is null");
+        }
 
         if (autoSearchCheckbox) {
             autoSearchCheckbox.addEventListener('change', handleCheckboxChange);
@@ -1184,7 +1155,6 @@
      * sets up the interface, and starts timers/listeners.
      */
     async function initialize() {
-
         // 1. Load Default Data from Files first
         const dataLoaded = await loadDataFromFiles();
 
@@ -1212,12 +1182,10 @@
             // 3. Assign Settings (Timer, Date, Used Searches)
             TARGET_MINUTES = userData.timerTargetMinutes ?? DEFAULT_TARGET_MINUTES;
             TARGET_SECONDS = TARGET_MINUTES * 60;
-            secondsRemaining = TARGET_SECONDS; // Set initial countdown value
             lastUsedDate = userData.lastUsedDate ?? '';
             const loadedUsedSearches = userData.usedSearchesToday ?? [];
             autoSearchEnabled = userData.autoSearchEnabled ?? false;
             simulateTypingEnabled = userData.simulateTypingEnabled ?? false;
-            console.log(`BST: Loaded Checkbox States: AutoSearch=${autoSearchEnabled}, SimulateTyping=${simulateTypingEnabled}`);
 
             // 4. Assign Template Lists (Use saved user data or fallback to loaded defaults)
             searchTemplates = Array.isArray(userData.userSearchTemplates) ? userData.userSearchTemplates : defaultSearchTemplates;
@@ -1257,8 +1225,7 @@
 
             // 7. Validate Essential Data
             if (!Array.isArray(searchTemplates) || searchTemplates.length === 0) {
-                console.error("BST: CRITICAL - No search templates available.");
-                // Consider stopping or disabling features
+                throw new Error("CRITICAL - No search templates available.");
             }
 
             // 8. Create the UI
