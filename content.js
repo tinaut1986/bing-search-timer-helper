@@ -168,7 +168,7 @@
 
     /**
      * Generates a search suggestion, ensuring it hasn't been used today.
-     * Updates the local storage list of used searches.
+     * Does NOT update the used searches list; that is now handled when the search is executed.
      * @param {number} [maxAttempts=30] - Maximum tries to find a unique search.
      * @returns {Promise<string>} A unique search suggestion or a fallback string.
      */
@@ -177,23 +177,14 @@
         while (attempts < maxAttempts) {
             const candidate = generateDynamicSearch();
 
+            // We just need a candidate that's not an error and not already used today.
             if (candidate && !candidate.startsWith('[') && !usedSearchesToday.includes(candidate)) {
-                usedSearchesToday.push(candidate);
-
-                try {
-                    const today = new Date().toISOString().split('T')[0];
-                    // Save updated list and potentially update date if it changed (though handled in initialize)
-                    await browser.storage.local.set({
-                        lastUsedDate: today,
-                        usedSearchesToday: usedSearchesToday
-                    });
-                } catch (err) {
-                    console.error("Failed to save updated used search list:", err);
-                }
                 return candidate;
-            } else if (!(candidate && usedSearchesToday.includes(candidate))) {
-                if (candidate && candidate.startsWith('['))
-                    break; // Avoid infinite loops on generation errors
+            }
+
+            // If we get a generation error, break to avoid infinite loops.
+            if (candidate && candidate.startsWith('[')) {
+                break;
             }
             attempts++;
         }
@@ -707,10 +698,10 @@
         buttonGroup.className = 'button-group'; // Optional class for styling group
         buttonGroup.style.marginTop = '5px';
         // Order of buttons matters for the :first-child CSS rule
-        buttonGroup.appendChild(copyButton);
         buttonGroup.appendChild(pasteSearchButton);
+        buttonGroup.appendChild(copyButton);
         buttonGroup.appendChild(newSearchButton);
-        buttonGroup.appendChild(showUsedButton)
+        buttonGroup.appendChild(showUsedButton);
         buttonGroup.appendChild(optionsButton);
 
         // --- Assemble Content Wrapper ---
@@ -857,6 +848,20 @@
             return;
         }
 
+        // --- Add to history now that the user has committed to using the search ---
+        if (!usedSearchesToday.includes(suggestionText)) {
+            usedSearchesToday.push(suggestionText);
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                await browser.storage.local.set({
+                    lastUsedDate: today,
+                    usedSearchesToday: usedSearchesToday
+                });
+            } catch (err) {
+                console.error("Failed to save updated used search list:", err);
+            }
+        }
+
         const bingSearchBox = document.getElementById('sb_form_q');
         if (!bingSearchBox) {
             console.error("Paste Search: Could not find Bing search input #sb_form_q.");
@@ -934,29 +939,43 @@
     }
 
     /**
-     * Observes DOM changes to detect SPA navigation within Bing search.
+     * Observes DOM changes to detect SPA navigation and dynamic content reloads.
      */
     function observeChanges() {
         if (window.bingTimerObserver) { return; } // Prevent multiple observers
 
+        // Debounced function to re-initialize if the widget is removed from the DOM.
+        const reinitializeIfNeeded = debounce(() => {
+            // Check if we are on a Bing search page and the widget is gone.
+            if (location.hostname.includes('bing.com') &&
+                location.pathname.startsWith('/search') &&
+                !document.getElementById('bing-timer-helper')) {
+                console.log("Bing Search Timer: Widget not found. Attempting to re-initialize.");
+                initialize(); // Re-run the main setup function.
+            }
+        }, 300); // A 300ms debounce should be enough to prevent rapid-fire re-initialization.
+
         const observer = new MutationObserver(mutations => {
-            // Use rAF for checking URL after potential DOM updates/rendering
+            // We use requestAnimationFrame to ensure we check the DOM after it has settled from the mutation.
             requestAnimationFrame(() => {
+                // 1. Handle re-initialization if the widget was removed.
+                reinitializeIfNeeded();
+
+                // 2. Handle URL changes for simple timer resets on SPA navigation.
                 if (document.location.href !== lastHref) {
                     lastHref = document.location.href;
-                    // Reset timer only if we are still on a Bing search page and widget exists
+                    // If the widget still exists on a valid page, just reset the timer.
                     if (location.hostname.includes('bing.com') && location.pathname.startsWith('/search') && document.getElementById('bing-timer-helper')) {
                         resetTimer();
                     } else if (!location.hostname.includes('bing.com')) {
-                        stopTimer(); // Stop if navigated away from Bing
-                    } else if (!document.getElementById('bing-timer-helper') && location.hostname.includes('bing.com') && location.pathname.startsWith('/search')) {
-                        console.warn("Bing Search Timer: Navigation detected, but widget not found.");
+                        stopTimer(); // Stop the timer if we've navigated away from Bing.
                     }
                 }
             });
         });
+
         observer.observe(document.body, { childList: true, subtree: true });
-        window.bingTimerObserver = observer; // Store reference
+        window.bingTimerObserver = observer; // Store a reference to avoid creating multiple observers.
     }
 
     // ==================================

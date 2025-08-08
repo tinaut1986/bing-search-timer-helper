@@ -106,6 +106,11 @@
     /* Align buttons nicely */
 }
 
+.button-group {
+    display: flex;
+    flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+    gap: 5px; /* Add a gap between buttons */
+}
 /* Remove margin from the first button in a group */
 #bing-timer-helper .button-group>button:first-child {
     margin-left: 0;
@@ -117,63 +122,45 @@
     border-color: #bbb;
 }
 
-/* === Specific Button Styles (Increased Specificity) === */
+/* === Specific Button Styles === */
 
-/* Copy Button: Primary action */
-#bing-timer-helper #bing-copy-button { /* Increased Specificity */
-    background-color: #007bff; /* Blue */
-    color: white;
-    border-color: #0056b3;
-}
-#bing-timer-helper #bing-copy-button:hover { /* Increased Specificity */
-    background-color: #0056b3;
-    border-color: #004085;
-}
-
-/* Paste Button: Success/Action related to suggestion */
-#bing-timer-helper #bing-paste-search-button { /* Increased Specificity */
+/* Paste/Search Button: This is now the PRIMARY action button */
+#bing-timer-helper #bing-paste-search-button {
     background-color: #28a745; /* Green */
     color: white;
     border-color: #1e7e34;
+    padding: 8px 16px;   /* Larger padding to make it stand out */
+    font-size: 15px;     /* Slightly larger font */
+    font-weight: bold;   /* Make text bolder */
+    order: -1;           /* Visually move to the front regardless of DOM order if using flexbox */
 }
-#bing-timer-helper #bing-paste-search-button:hover { /* Increased Specificity */
+#bing-timer-helper #bing-paste-search-button:hover {
     background-color: #218838;
     border-color: #19692c;
 }
 
-/* New Search Button: Generate/Refresh action */
-#bing-timer-helper #bing-new-search-button { /* Increased Specificity */
-    background-color: #ffc107; /* Yellow/Orange */
-    color: #212529; /* Dark text for contrast */
-    border-color: #d39e00;
-}
-#bing-timer-helper #bing-new-search-button:hover { /* Increased Specificity */
-    background-color: #e0a800;
-    border-color: #b08800;
-}
-
-/* Show History Button: Secondary/Info action */
-#bing-timer-helper #bing-show-used-button { /* Increased Specificity */
-    background-color: #6c757d; /* Gray */
-    color: white;
-    border-color: #5a6268;
-}
-#bing-timer-helper #bing-show-used-button:hover { /* Increased Specificity */
-    background-color: #5a6268;
-    border-color: #4e555b;
+/* The rest of the buttons are now secondary, with a more muted style */
+#bing-timer-helper #bing-copy-button,
+#bing-timer-helper #bing-new-search-button,
+#bing-timer-helper #bing-show-used-button,
+#bing-timer-helper #bing-options-button {
+    background-color: #f0f0f0;
+    color: #333;
+    border-color: #ccc;
 }
 
-/* Options Button: Settings/Configuration */
-#bing-timer-helper #bing-options-button { /* Increased Specificity */
-    background-color: #17a2b8; /* Teal */
-    color: white;
-    border-color: #138496;
-    padding: 6px 8px; /* Slightly less padding for gear icon */
-    font-size: 14px; /* Slightly larger icon size */
+#bing-timer-helper #bing-copy-button:hover,
+#bing-timer-helper #bing-new-search-button:hover,
+#bing-timer-helper #bing-show-used-button:hover,
+#bing-timer-helper #bing-options-button:hover {
+    background-color: #e0e0e0;
+    border-color: #bbb;
 }
-#bing-timer-helper #bing-options-button:hover { /* Increased Specificity */
-    background-color: #138496;
-    border-color: #0f6674;
+
+/* Keep specific padding for the options button icon */
+#bing-timer-helper #bing-options-button {
+    padding: 6px 8px;
+    font-size: 14px;
 }
 
 /* === History Modal Styles === */
