@@ -19,8 +19,9 @@
     // --- Drag State Variables ---
     let isDragging = false;    // Is the user currently dragging the widget?
     let currentX, currentY, initialX, initialY; // Coordinates used during drag
-    let xOffset = 0;           // Saved X offset (from top-left) for widget position
+    let xOffset = 0;           // Saved X offset for widget position
     let yOffset = 0;           // Saved Y offset for widget position
+    const UI_MARGIN = 10;      // Consistent margin from page edges
 
     // --- Unique Search State Variables ---
     let usedSearchesToday = []; // Holds searches suggested today to avoid repeats
@@ -398,7 +399,7 @@
         const widgetRect = container.getBoundingClientRect();
         const winWidth = window.innerWidth;
         const winHeight = window.innerHeight;
-        const margin = 5;
+        const margin = UI_MARGIN;
         const minX = margin;
         const minY = margin;
         // Calculate max based on *top-left* corner of widget
@@ -1140,7 +1141,7 @@
         const widgetRect = element.getBoundingClientRect();
         const winWidth = document.documentElement.clientWidth || window.innerWidth;
         const winHeight = document.documentElement.clientHeight || window.innerHeight;
-        const margin = 5;
+        const margin = UI_MARGIN;
         if (!widgetRect.width || !widgetRect.height || widgetRect.width <= 0 || widgetRect.height <= 0) { return { x: targetX, y: targetY, clamped: false }; }
         const minX = margin; const minY = margin;
         const maxX = winWidth - widgetRect.width - margin; const maxY = winHeight - widgetRect.height - margin;
@@ -1148,7 +1149,6 @@
         const safeMaxX = Math.max(safeMinX, maxX); const safeMaxY = Math.max(safeMinY, maxY);
         const clampedX = clamp(targetX, safeMinX, safeMaxX); const clampedY = clamp(targetY, safeMinY, safeMaxY);
         const wasClamped = clampedX !== targetX || clampedY !== targetY;
-        // Optional logging here if needed
         return { x: clampedX, y: clampedY, clamped: wasClamped };
     }
 
@@ -1332,12 +1332,10 @@
                 xOffset = userData.widgetPosX;
                 yOffset = userData.widgetPosY;
             } else {
-                // No position saved - Set flag to calculate default top-right LATER
-                // For the *initial* render before calculation, place it at CSS default (15,15)
-                // The transform offset variables start at 0,0 relative to the CSS position
-                xOffset = 0; // Start with zero transform offset initially
-                yOffset = 0;
-                needsAdjustToRightDefault = true; // Set flag to adjust after creation
+                // No position saved - Start at a reasonable default (15, 15)
+                xOffset = 15;
+                yOffset = 15;
+                needsAdjustToRightDefault = true; // Set flag to adjust to right after creation
             }
 
             // 6. Handle Daily Reset for Used Searches
@@ -1382,9 +1380,9 @@
                     // *** END VALIDATION ***
 
                     const winWidth = document.documentElement.clientWidth || window.innerWidth;
-                    const margin = 15;
+                    const margin = UI_MARGIN;
                     const targetX = winWidth - widgetRect.width - margin;
-                    const targetY = 15;
+                    const targetY = margin;
 
                     const clampedPos = getClampedPosition(targetX, targetY, container); // getClampedPosition already logs internally
 

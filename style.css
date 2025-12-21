@@ -1,9 +1,9 @@
 /* === Base Widget Container === */
 #bing-timer-helper {
     position: fixed;
-    /* Initial position (can be overridden by JS loading saved position) */
-    top: 15px;
-    left: 15px;
+    /* Base position for transform-based movement */
+    top: 0;
+    left: 0;
     right: auto;
     bottom: auto;
     background-color: rgba(255, 255, 255, 0.98);
