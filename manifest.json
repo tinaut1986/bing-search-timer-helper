@@ -5,7 +5,7 @@
   "default_locale": "es",
   "version": "1.7.0",
   "version_name": "1.7.0 (2025-12-21)",
-  "author": "Tinaut1986 (Adapted by AI)",
+  "author": "Tinaut1986",
   "icons": {
     "48": "icons/icon-48.png",
     "96": "icons/icon-96.png"
@@ -31,7 +31,6 @@
     "scripts": [
       "background.js"
     ],
-    "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
@@ -66,7 +65,9 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "bing-timer-helper@tinaut1986.example.com"
+      "id": "bing-timer-helper@tinaut1986.example.com",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": false
     }
   }
 }
