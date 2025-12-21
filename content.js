@@ -1284,6 +1284,13 @@
      * sets up the interface, and starts timers/listeners.
      */
     async function initialize() {
+        // 0. Check for search box presence.
+        // We only want to show the widget on pages where a search can actually be performed.
+        if (!document.getElementById('sb_form_q')) {
+            console.log("Bing Search Timer: Search box #sb_form_q not found. Skipping initialization for this page.");
+            return;
+        }
+
         // 1. Load Default Data from Files first
         const dataLoaded = await loadDataFromFiles();
 
