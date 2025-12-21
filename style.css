@@ -333,9 +333,10 @@
 #bing-timer-helper.minimized-widget {
     min-width: 120px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
-    border-bottom: none;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    /* Clip children to rounded corners */
+    overflow: hidden;
+    /* Ensure background is fully opaque */
+    background-color: white;
 }
 
 #bing-timer-helper.minimized-widget #bing-timer-content-wrapper {
@@ -344,4 +345,7 @@
 
 #bing-timer-helper.minimized-widget #bing-timer-drag-handle {
     border-bottom: none;
+    /* Restore bottom radius for the handle since it's the only visible part */
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
 }
