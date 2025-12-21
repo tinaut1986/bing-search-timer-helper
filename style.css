@@ -65,7 +65,8 @@
     border: none;
     cursor: pointer;
     font-size: 14px;
-    padding: 2px 6px;
+    width: 32px;
+    height: 28px;
     color: #888;
     line-height: 1;
     transition: color 0.2s, transform 0.2s;
@@ -74,11 +75,41 @@
     justify-content: center;
     border-radius: 4px;
     margin-left: auto;
+    box-sizing: border-box;
 }
 
 #bing-minimize-button:hover {
     color: #333;
     background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Minimized search button */
+#bing-timer-helper #bing-minimized-search-button {
+    display: none !important;
+    background-color: #28a745;
+    border: 1px solid #1e7e34;
+    cursor: pointer;
+    font-size: 14px;
+    width: 32px;
+    height: 28px;
+    color: white;
+    line-height: 1;
+    transition: background-color 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin-right: auto;
+    box-sizing: border-box;
+    /* Push center text */
+}
+
+#bing-timer-helper #bing-minimized-search-button:hover {
+    background-color: #218838;
+}
+
+#bing-timer-helper.minimized-widget #bing-minimized-search-button {
+    display: flex !important;
 }
 
 /* === Content Wrapper (Below Handle) === */

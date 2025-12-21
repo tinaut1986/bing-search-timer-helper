@@ -30,7 +30,7 @@
     // --- Interface Element Variables ---
     let container, dragHandle, handleText, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton;
     let optionsButton, pasteSearchButton, autoSearchCheckbox, simulateTypingCheckbox, autoSearchLabel, simulateTypingLabel;
-    let minimizeButton;
+    let minimizeButton, minimizedSearchButton;
 
     let autoSearchEnabled = false;      // Loaded/saved state
     let simulateTypingEnabled = false;  // Loaded/saved state
@@ -667,6 +667,15 @@
         handleText = document.createElement('span');
         handleText.className = 'handle-text';
 
+        minimizedSearchButton = document.createElement('button');
+        minimizedSearchButton.id = 'bing-minimized-search-button';
+        minimizedSearchButton.textContent = '🔍';
+        minimizedSearchButton.title = t('btnPaste');
+        minimizedSearchButton.onclick = (e) => {
+            e.stopPropagation();
+            pasteSuggestionToSearchBox();
+        };
+
         minimizeButton = document.createElement('button');
         minimizeButton.id = 'bing-minimize-button';
         minimizeButton.textContent = isMinimized ? '🔼' : '🔽';
@@ -687,6 +696,7 @@
             handleText.textContent = t('dragHandle');
         }
 
+        dragHandle.appendChild(minimizedSearchButton);
         dragHandle.appendChild(handleText);
         dragHandle.appendChild(minimizeButton);
 
