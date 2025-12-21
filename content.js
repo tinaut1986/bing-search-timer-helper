@@ -923,32 +923,91 @@
     }
 
     /**
-     * Simulates typing text into an input field character by character.
-     * @param {HTMLInputElement} inputElement - The input field element.
-     * @param {string} textToType - The text to simulate typing.
-     * @param {number} [minDelay=50] - Minimum delay between characters (ms).
-     * @param {number} [maxDelay=150] - Maximum delay between characters (ms).
-     */
-    async function simulateTyping(inputElement, textToType, minDelay = 50, maxDelay = 150) {
-        console.log(`Simulating typing for: "${textToType}"`);
-        inputElement.value = ''; // Clear the input first
-        inputElement.focus();    // Focus on the input
+ * Simulates typing text into an input field character by character with realistic mistakes and corrections.
+ * @param {HTMLInputElement} inputElement - The input field element.
+ * @param {string} textToType - The text to simulate typing.
+ * @param {number} [minDelay=40] - Minimum delay between characters (ms).
+ * @param {number} [maxDelay=120] - Maximum delay between characters (ms).
+ */
+    async function simulateTyping(inputElement, textToType, minDelay = 40, maxDelay = 120) {
+        console.log(`Simulating realistic typing for: "${textToType}"`);
+        inputElement.value = '';
+        inputElement.focus();
 
-        for (let i = 0; i < textToType.length; i++) {
-            const char = textToType[i];
-            inputElement.value += char; // Append character
+        const TYPO_CHANCE = 0.04;          // 4% chance per char to make a mistake
+        const CORRECTION_CHANCE = 0.85;   // 85% of mistakes are corrected
+        const nearbyKeys = {
+            'a': 'sqwz', 'b': 'vghn', 'c': 'xdfv', 'd': 'erfcxs', 'e': 'rdws', 'f': 'rtgvcd',
+            'g': 'tyhbfv', 'h': 'yujngt', 'i': 'ujko', 'j': 'uikmnh', 'k': 'iolmj', 'l': 'okp',
+            'm': 'njk', 'n': 'bhjm', 'o': 'iklp', 'p': 'ol', 'q': 'wa', 'r': 'edtf',
+            's': 'axwdz', 't': 'rfgy', 'u': 'yhji', 'v': 'cfgb', 'w': 'qeas', 'x': 'zsdc',
+            'y': 'tghu', 'z': 'asx', ' ': 'cvbnm',
+            '1': '2q', '2': '13wq', '3': '24ew', '4': '35re', '5': '46tr',
+            '6': '57yt', '7': '68uy', '8': '79iu', '9': '80oi', '0': '9po'
+        };
 
-            // Dispatch 'input' event after each character to mimic real typing
-            inputElement.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        let i = 0;
+        while (i < textToType.length) {
+            // --- Natural Pause occasionally ---
+            if (i > 0 && Math.random() < 0.1) {
+                await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+            }
 
-            // Wait for a random delay
+            const targetChar = textToType[i].toLowerCase();
+
+            // --- TYPO LOGIC ---
+            if (Math.random() < TYPO_CHANCE && nearbyKeys[targetChar]) {
+                const neighbors = nearbyKeys[targetChar];
+                const typoChar = neighbors[Math.floor(Math.random() * neighbors.length)];
+                const shouldCorrect = Math.random() < CORRECTION_CHANCE;
+
+                // Type the typo
+                inputElement.value += typoChar;
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                await new Promise(r => setTimeout(r, minDelay + Math.random() * (maxDelay - minDelay)));
+
+                if (shouldCorrect) {
+                    // How many more chars do we type before noticing?
+                    const peekAhead = Math.min(Math.floor(Math.random() * 4), textToType.length - i - 1);
+
+                    // Type a few more (correct/incorrect) chars before realizing the mistake
+                    for (let j = 1; j <= peekAhead; j++) {
+                        inputElement.value += textToType[i + j];
+                        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        await new Promise(r => setTimeout(r, minDelay + Math.random() * (maxDelay - minDelay)));
+                    }
+
+                    // Pause: realize mistake
+                    await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+
+                    // Backspace (peekAhead + 1 typo)
+                    for (let k = 0; k <= peekAhead; k++) {
+                        inputElement.value = inputElement.value.slice(0, -1);
+                        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        await new Promise(r => setTimeout(r, 40 + Math.random() * 60)); // Rapid backspacing
+                    }
+
+                    // Note: i remains same, so we retry typing the correct char in next iteration
+                    continue;
+                } else {
+                    // User didn't notice/care about this typo, move on to next char
+                    i++;
+                    continue;
+                }
+            }
+
+            // --- NORMAL TYPING ---
+            inputElement.value += textToType[i];
+            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+            i++;
+
+            // Random delay
             const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        // Dispatch 'change' event after typing is complete (optional but good practice)
-        inputElement.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-        console.log("Simulated typing complete.");
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log("Realistic typing complete.");
     }
 
     /**
