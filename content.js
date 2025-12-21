@@ -27,11 +27,14 @@
     let lastUsedDate = '';      // YYYY-MM-DD date for resetting usedSearchesToday
 
     // --- Interface Element Variables ---
-    let container, dragHandle, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton;
+    let container, dragHandle, handleText, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton;
     let optionsButton, pasteSearchButton, autoSearchCheckbox, simulateTypingCheckbox, autoSearchLabel, simulateTypingLabel;
+    let minimizeButton;
 
     let autoSearchEnabled = false;      // Loaded/saved state
     let simulateTypingEnabled = false;  // Loaded/saved state
+    let isMinimized = false;            // Current minimized state
+    let savedPosBeforeMinimize = { x: 0, y: 0 }; // Position to restore to
 
     // --- URL Tracking Variable ---
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
@@ -261,7 +264,11 @@
         const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
 
         if (timerDisplay) {
-            timerDisplay.textContent = formatTime(secondsRemaining);
+            const timeStr = formatTime(secondsRemaining);
+            timerDisplay.textContent = timeStr;
+            if (isMinimized && handleText) {
+                handleText.textContent = timeStr;
+            }
 
             // Apply color logic
             if (secondsRemaining <= 0) {
@@ -273,7 +280,7 @@
             }
         } else {
             console.warn("updateTimer: timerDisplay element not found, stopping timer.");
-            stopTimer(); 
+            stopTimer();
             return;
         }
 
@@ -337,7 +344,7 @@
 
         // Set the start time to now
         timerStartTime = Date.now();
-        
+
         if (timerInterval) clearInterval(timerInterval);
 
         timerActive = true;
@@ -427,6 +434,74 @@
             // Save corrected position asynchronously
             browser.storage.local.set({ widgetPosX: xOffset, widgetPosY: yOffset })
                 .catch(err => console.error("Failed to save corrected widget position:", err));
+        }
+    }
+
+    /**
+     * Toggles the minimized state of the widget.
+     */
+    async function toggleMinimize() {
+        if (!container) return;
+
+        isMinimized = !isMinimized;
+        console.log(`Widget toggled to minimized: ${isMinimized}`);
+
+        if (isMinimized) {
+            // --- Minimizing ---
+            // Save current position to restore it later
+            savedPosBeforeMinimize = { x: xOffset, y: yOffset };
+
+            // Add class for CSS changes
+            container.classList.add('minimized-widget');
+
+            // Move to bottom. We'll set a special Y that sticks to bottom.
+            // Using a very large Y and rely on ensureWidgetInBounds to clamp it to the bottom.
+            yOffset = window.innerHeight + 1000;
+
+            // Update button icon/text
+            if (minimizeButton) {
+                minimizeButton.textContent = '🔼';
+                minimizeButton.title = t('btnMaximize');
+            }
+            if (handleText) {
+                const now = Date.now();
+                const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
+                const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
+                handleText.textContent = formatTime(secondsRemaining);
+            }
+        } else {
+            // --- Maximizing ---
+            container.classList.remove('minimized-widget');
+
+            // Restore saved position
+            xOffset = savedPosBeforeMinimize.x;
+            yOffset = savedPosBeforeMinimize.y;
+
+            // Update button icon/text
+            if (minimizeButton) {
+                minimizeButton.textContent = '🔽';
+                minimizeButton.title = t('btnMinimize');
+            }
+            if (handleText) {
+                handleText.textContent = t('dragHandle');
+            }
+        }
+
+        // Apply visual change
+        setTranslate(xOffset, yOffset, container);
+        ensureWidgetInBounds(); // This will clamp the position correctly
+
+        // Save state to storage
+        try {
+            await browser.storage.local.set({
+                isMinimized: isMinimized,
+                savedPosX: savedPosBeforeMinimize.x,
+                savedPosY: savedPosBeforeMinimize.y,
+                widgetPosX: xOffset,
+                widgetPosY: yOffset
+            });
+        } catch (err) {
+            console.error("Failed to save minimized state:", err);
         }
     }
 
@@ -587,7 +662,32 @@
         // --- Drag Handle ---
         dragHandle = document.createElement('div');
         dragHandle.id = 'bing-timer-drag-handle';
-        dragHandle.textContent = t('dragHandle');
+
+        handleText = document.createElement('span');
+        handleText.className = 'handle-text';
+
+        minimizeButton = document.createElement('button');
+        minimizeButton.id = 'bing-minimize-button';
+        minimizeButton.textContent = isMinimized ? '🔼' : '🔽';
+        minimizeButton.title = isMinimized ? t('btnMaximize') : t('btnMinimize');
+        minimizeButton.onclick = (e) => {
+            e.stopPropagation(); // Avoid triggering drag
+            toggleMinimize();
+        };
+
+        if (isMinimized) {
+            container.classList.add('minimized-widget');
+            // Show timer if minimized initially
+            const now = Date.now();
+            const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
+            const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
+            handleText.textContent = formatTime(secondsRemaining);
+        } else {
+            handleText.textContent = t('dragHandle');
+        }
+
+        dragHandle.appendChild(handleText);
+        dragHandle.appendChild(minimizeButton);
 
         // --- Content Wrapper ---
         const contentWrapper = document.createElement('div');
@@ -1109,7 +1209,7 @@
         } catch (err) {
             console.warn(`⚠️ Fetch failed for locale ${localeFile}. Trying fallback...`, err);
         }
-    
+
         try {
             const fallbackRes = await fetch(browser.runtime.getURL(fallbackFile));
             if (fallbackRes.ok) {
@@ -1132,7 +1232,7 @@
     async function loadDataFromFiles() {
         try {
             const locale = (browser.i18n.getUILanguage() || 'en').split('-')[0];
-    
+
             const files = [
                 'searchTemplates.json',
                 'systems.json',
@@ -1143,13 +1243,13 @@
                 'sagas.json',
                 'numbers.json'
             ];
-    
+
             const datasets = await Promise.all(
                 files.map(file =>
                     smartFetchJson(`data/${locale}/${file}`, `data/en/${file}`)
                 )
             );
-    
+
             [
                 defaultSearchTemplates,
                 defaultSystems,
@@ -1160,13 +1260,13 @@
                 defaultSagas,
                 defaultNumbers
             ] = datasets;
-    
+
             return true;
         } catch (error) {
             console.error("loadDataFromFiles: Unexpected error:", error);
             return false;
         }
-    }    
+    }
 
     /**
      * Main initialization function for the content script.
@@ -1195,7 +1295,10 @@
                 userSagas: null, userGenres: null, userParts: null,
                 userNumbers: null, userAesthetics: null,
                 autoSearchEnabled: false,      // Defaults to false
-                simulateTypingEnabled: false   // Defaults to false
+                simulateTypingEnabled: false,  // Defaults to false
+                isMinimized: false,
+                savedPosX: null,
+                savedPosY: null
             });
 
             // 3. Assign Settings (Timer, Date, Used Searches)
@@ -1205,6 +1308,11 @@
             const loadedUsedSearches = userData.usedSearchesToday ?? [];
             autoSearchEnabled = userData.autoSearchEnabled ?? false;
             simulateTypingEnabled = userData.simulateTypingEnabled ?? false;
+            isMinimized = userData.isMinimized ?? false;
+            savedPosBeforeMinimize = {
+                x: userData.savedPosX ?? 0,
+                y: userData.savedPosY ?? 0
+            };
 
             // 4. Assign Template Lists (Use saved user data or fallback to loaded defaults)
             searchTemplates = Array.isArray(userData.userSearchTemplates) ? userData.userSearchTemplates : defaultSearchTemplates;

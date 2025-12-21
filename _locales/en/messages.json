@@ -97,5 +97,11 @@
   },
   "notifTimeUpBody": {
     "message": "You've reached your goal of $1 minutes."
+  },
+  "btnMinimize": {
+    "message": "Minimize"
+  },
+  "btnMaximize": {
+    "message": "Maximize"
   }
 }

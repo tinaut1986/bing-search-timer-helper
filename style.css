@@ -31,10 +31,9 @@
 #bing-timer-drag-handle {
     width: 100%;
     /* Occupy full width */
-    padding: 8px 0;
+    padding: 6px 10px;
     margin: 0;
     /* No extra margins */
-    text-align: center;
     font-size: 12px;
     color: #666;
     background-color: #f0f0f0;
@@ -47,6 +46,39 @@
     cursor: move;
     flex-shrink: 0;
     /* Prevent handle from shrinking */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#bing-timer-drag-handle .handle-text {
+    flex-grow: 1;
+    text-align: center;
+    pointer-events: none;
+    /* Let clicks pass through to the handle if needed, but dragging handles it */
+}
+
+/* Minimize button */
+#bing-minimize-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    color: #888;
+    line-height: 1;
+    transition: color 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+#bing-minimize-button:hover {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* === Content Wrapper (Below Handle) === */
@@ -91,8 +123,10 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
-    background-color: #f0f0f0; /* Default background - will be overridden by specific rules */
-    color: #333; /* Default text color */
+    background-color: #f0f0f0;
+    /* Default background - will be overridden by specific rules */
+    color: #333;
+    /* Default text color */
     transition: background-color 0.2s ease, border-color 0.2s ease;
     font-size: 13px;
     /* Base font size */
@@ -108,9 +142,12 @@
 
 .button-group {
     display: flex;
-    flex-wrap: wrap; /* Allow buttons to wrap on small screens */
-    gap: 5px; /* Add a gap between buttons */
+    flex-wrap: wrap;
+    /* Allow buttons to wrap on small screens */
+    gap: 5px;
+    /* Add a gap between buttons */
 }
+
 /* Remove margin from the first button in a group */
 #bing-timer-helper .button-group>button:first-child {
     margin-left: 0;
@@ -126,14 +163,20 @@
 
 /* Paste/Search Button: This is now the PRIMARY action button */
 #bing-timer-helper #bing-paste-search-button {
-    background-color: #28a745; /* Green */
+    background-color: #28a745;
+    /* Green */
     color: white;
     border-color: #1e7e34;
-    padding: 8px 16px;   /* Larger padding to make it stand out */
-    font-size: 15px;     /* Slightly larger font */
-    font-weight: bold;   /* Make text bolder */
-    order: -1;           /* Visually move to the front regardless of DOM order if using flexbox */
+    padding: 8px 16px;
+    /* Larger padding to make it stand out */
+    font-size: 15px;
+    /* Slightly larger font */
+    font-weight: bold;
+    /* Make text bolder */
+    order: -1;
+    /* Visually move to the front regardless of DOM order if using flexbox */
 }
+
 #bing-timer-helper #bing-paste-search-button:hover {
     background-color: #218838;
     border-color: #19692c;
@@ -243,20 +286,28 @@
 
 /* === Widget Options Styling === */
 .widget-options {
-    border-top: 1px solid #eee; /* Separator line */
+    border-top: 1px solid #eee;
+    /* Separator line */
     padding-top: 10px;
-    margin-top: 10px; /* Space above options */
-    text-align: left; /* Align labels left */
-    display: flex; /* Use flex for alignment */
+    margin-top: 10px;
+    /* Space above options */
+    text-align: left;
+    /* Align labels left */
+    display: flex;
+    /* Use flex for alignment */
     align-items: center;
-    flex-wrap: wrap; /* Allow wrapping if space is tight */
-    gap: 5px 15px; /* Row gap, Column gap */
+    flex-wrap: wrap;
+    /* Allow wrapping if space is tight */
+    gap: 5px 15px;
+    /* Row gap, Column gap */
 }
 
 .widget-options label {
     cursor: pointer;
-    user-select: none; /* Prevent selecting label text */
-    font-weight: normal; /* Override default label bold if needed */
+    user-select: none;
+    /* Prevent selecting label text */
+    font-weight: normal;
+    /* Override default label bold if needed */
     color: #555;
 }
 
@@ -265,4 +316,21 @@
     /* Optional: make checkbox slightly larger */
     /* width: 14px; */
     /* height: 14px; */
+}
+
+/* === Minimized State === */
+#bing-timer-helper.minimized-widget {
+    min-width: 120px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#bing-timer-helper.minimized-widget #bing-timer-content-wrapper {
+    display: none;
+}
+
+#bing-timer-helper.minimized-widget #bing-timer-drag-handle {
+    border-bottom: none;
 }
