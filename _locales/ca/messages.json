@@ -29,6 +29,9 @@
   "btnPaste": {
     "message": "Enganxa al quadre de cerca de Bing"
   },
+  "btnMainAction": {
+    "message": "🔍 Enganxa i Cerca"
+  },
   "chkAutoSearch": {
     "message": "Cerca automàtica?"
   },

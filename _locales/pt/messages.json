@@ -29,6 +29,9 @@
   "btnPaste": {
     "message": "Colar na caixa de pesquisa do Bing"
   },
+  "btnMainAction": {
+    "message": "🔍 Colar e Pesquisar"
+  },
   "chkAutoSearch": {
     "message": "Pesquisar automaticamente?"
   },

@@ -746,7 +746,7 @@
         // Styles applied via CSS
 
         pasteSearchButton = document.createElement('button');
-        pasteSearchButton.textContent = '⬅️'; // Or an arrow/paste icon <svg>...</svg>
+        pasteSearchButton.textContent = t('btnMainAction');
         pasteSearchButton.id = 'bing-paste-search-button';
         pasteSearchButton.title = t('btnPaste');
 
@@ -972,7 +972,7 @@
         // --- Disable buttons during operation ---
         const buttonsToDisable = [copyButton, newSearchButton, showUsedButton, optionsButton, pasteSearchButton];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
-        const originalPasteIcon = pasteSearchButton ? pasteSearchButton.textContent : '⬅️';
+        const originalPasteIcon = pasteSearchButton ? pasteSearchButton.textContent : t('btnMainAction');
         if (pasteSearchButton) pasteSearchButton.textContent = '...'; // Indicate working
 
         try {

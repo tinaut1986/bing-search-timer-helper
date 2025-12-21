@@ -29,6 +29,9 @@
   "btnPaste": {
     "message": "Coller dans la barre de recherche Bing"
   },
+  "btnMainAction": {
+    "message": "🔍 Coller et Chercher"
+  },
   "chkAutoSearch": {
     "message": "Recherche auto ?"
   },

@@ -29,6 +29,9 @@
   "btnPaste": {
     "message": "Paste suggestion into Bing search box"
   },
+  "btnMainAction": {
+    "message": "🔍 Paste & Search"
+  },
   "chkAutoSearch": {
     "message": "Auto Search?"
   },

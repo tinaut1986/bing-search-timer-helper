@@ -29,6 +29,9 @@
     "btnPaste": {
       "message": "Pegar sugerencia en el cuadro de búsqueda"
     },
+    "btnMainAction": {
+      "message": "🔍 Pegar y Buscar"
+    },
     "chkAutoSearch": {
       "message": "¿Buscar automáticamente?"
     },
