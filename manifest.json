@@ -66,8 +66,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "bing-timer-helper@tinaut1986.example.com",
-      "strict_min_version": "109.0",
-      "data_collection_permissions": false
+      "strict_min_version": "109.0"
     }
   }
 }
