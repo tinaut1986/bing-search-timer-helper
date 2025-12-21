@@ -1,5 +1,8 @@
 (async function () {
     'use strict';
+    // Compatibility shim for Chrome/Firefox/Android
+    globalThis.browser = globalThis.browser || globalThis.chrome;
+
     // --- Configuration Constants ---
     const DEFAULT_TARGET_MINUTES = 15; // Default timer goal in minutes
     const TIMER_INITIAL_RED_DURATION = 10; // Seconds the timer stays red initially
@@ -780,28 +783,31 @@
         autoSearchLabel.textContent = t('chkAutoSearch');
         autoSearchLabel.title = 'If checked, automatically performs the search after pasting.';
         autoSearchLabel.style.cursor = 'pointer';
-        autoSearchLabel.style.marginRight = '15px'; // Space between options
-        autoSearchLabel.style.verticalAlign = 'middle';
 
         // Simulate Typing Checkbox
         simulateTypingCheckbox = document.createElement('input');
         simulateTypingCheckbox.type = 'checkbox';
         simulateTypingCheckbox.id = 'bing-simulate-typing-check';
         simulateTypingCheckbox.checked = simulateTypingEnabled; // Set initial state
-        simulateTypingCheckbox.style.marginRight = '5px';
-        simulateTypingCheckbox.style.verticalAlign = 'middle';
 
         simulateTypingLabel = document.createElement('label');
         simulateTypingLabel.htmlFor = 'bing-simulate-typing-check';
         simulateTypingLabel.textContent = t('chkSimulateTyping');
         simulateTypingLabel.title = 'If checked, types the suggestion character by character instead of pasting instantly.';
         simulateTypingLabel.style.cursor = 'pointer';
-        simulateTypingLabel.style.verticalAlign = 'middle';
 
-        optionsDiv.appendChild(autoSearchCheckbox);
-        optionsDiv.appendChild(autoSearchLabel);
-        optionsDiv.appendChild(simulateTypingCheckbox);
-        optionsDiv.appendChild(simulateTypingLabel);
+        const row1 = document.createElement('div');
+        row1.className = 'option-row';
+        row1.appendChild(autoSearchCheckbox);
+        row1.appendChild(autoSearchLabel);
+
+        const row2 = document.createElement('div');
+        row2.className = 'option-row';
+        row2.appendChild(simulateTypingCheckbox);
+        row2.appendChild(simulateTypingLabel);
+
+        optionsDiv.appendChild(row1);
+        optionsDiv.appendChild(row2);
 
 
         // --- Button Group Container ---
@@ -1005,14 +1011,30 @@
             // --- Step 2: Perform search if Auto Search is enabled ---
             if (autoSearchEnabled) {
                 console.log("Auto Search enabled, attempting to click search button...");
-                const bingSearchButton = document.getElementById('sb_form_go');
+                // Try different selectors for the search button (Desktop and Mobile)
+                const searchButtonSelectors = ['#sb_form_go', '.b_searchboxSubmit', 'input[type="submit"]', 'button[type="submit"]', '.search.icon'];
+                let bingSearchButton = null;
+
+                for (const selector of searchButtonSelectors) {
+                    bingSearchButton = document.querySelector(selector);
+                    if (bingSearchButton) {
+                        console.log(`Found search button using selector: ${selector}`);
+                        break;
+                    }
+                }
+
                 if (bingSearchButton) {
                     bingSearchButton.click();
                     console.log("Search button clicked.");
                 } else {
-                    console.warn("Auto Search: Could not find search button #sb_form_go.");
-                    // Maybe try submitting the form? Less reliable.
-                    // bingSearchBox.form?.submit();
+                    console.warn("Auto Search: Could not find search button. Attempting form submit.");
+                    // Fallback: Submit the form directly
+                    if (bingSearchBox.form) {
+                        bingSearchBox.form.submit();
+                        console.log("Form submitted directly.");
+                    } else {
+                        console.error("Auto Search: No form found to submit.");
+                    }
                 }
             } else {
                 console.log("Auto Search disabled.");
@@ -1075,9 +1097,11 @@
                 // 2. Handle URL changes for simple timer resets on SPA navigation.
                 if (document.location.href !== lastHref) {
                     lastHref = document.location.href;
-                    // If the widget still exists on a valid page, just reset the timer.
+                    // If the widget still exists on a valid page, just reset the timer and update the suggestion.
                     if (location.hostname.includes('bing.com') && location.pathname.startsWith('/search') && document.getElementById('bing-timer-helper')) {
+                        console.log("SPA Navigation detected. Resetting timer and getting new suggestion.");
                         resetTimer();
+                        updateSearchDisplay();
                     } else if (!location.hostname.includes('bing.com')) {
                         stopTimer(); // Stop the timer if we've navigated away from Bing.
                     }

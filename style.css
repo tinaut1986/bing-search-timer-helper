@@ -329,19 +329,18 @@
 /* === Widget Options Styling === */
 .widget-options {
     border-top: 1px solid #eee;
-    /* Separator line */
     padding-top: 10px;
     margin-top: 10px;
-    /* Space above options */
-    text-align: left;
-    /* Align labels left */
     display: flex;
-    /* Use flex for alignment */
+    flex-direction: column;
+    /* Force column on mobile/small widths */
+    gap: 8px;
+}
+
+.option-row {
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    /* Allow wrapping if space is tight */
-    gap: 5px 15px;
-    /* Row gap, Column gap */
+    gap: 8px;
 }
 
 .widget-options label {

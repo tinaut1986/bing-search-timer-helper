@@ -1,4 +1,9 @@
 /**
+ * Compatibility shim for Chrome/Firefox/Android
+ */
+globalThis.browser = globalThis.browser || globalThis.chrome;
+
+/**
  * Listens for messages from content scripts or other parts of the extension.
  */
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
