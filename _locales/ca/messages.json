@@ -127,5 +127,11 @@
   },
   "statusSession": {
     "message": "Sessió: $1 / $2"
+  },
+  "notifSessionDoneTitle": {
+    "message": "Sessió completada"
+  },
+  "notifSessionDoneBody": {
+    "message": "S'han realitzat les $1 cerques programades."
   }
 }

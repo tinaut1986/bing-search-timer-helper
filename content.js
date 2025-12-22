@@ -50,7 +50,7 @@
     let autoSessionTarget = 30;
     let autoSessionCurrent = 0;
     let autoSessionTimeout = null;
-    let autoSessionInput, autoSessionButton, autoSessionStatusLabel;
+    let autoSessionInput, autoSessionButton, autoSessionStatusLabel, minimizedSessionButton;
 
     // --- URL Tracking Variable ---
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
@@ -691,6 +691,16 @@
             pasteSuggestionToSearchBox();
         };
 
+        minimizedSessionButton = document.createElement('button');
+        minimizedSessionButton.id = 'bing-minimized-session-button';
+        minimizedSessionButton.textContent = autoSessionActive ? '⏸️' : '▶️';
+        minimizedSessionButton.style.backgroundColor = autoSessionActive ? '#dc3545' : '#007bff';
+        minimizedSessionButton.title = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
+        minimizedSessionButton.onclick = (e) => {
+            e.stopPropagation();
+            toggleAutoSession();
+        };
+
         minimizeButton = document.createElement('button');
         minimizeButton.id = 'bing-minimize-button';
         minimizeButton.textContent = isMinimized ? '🔼' : '🔽';
@@ -712,6 +722,7 @@
         }
 
         dragHandle.appendChild(minimizedSearchButton);
+        dragHandle.appendChild(minimizedSessionButton);
         dragHandle.appendChild(handleText);
         dragHandle.appendChild(minimizeButton);
 
@@ -1257,13 +1268,36 @@
         if (autoSessionActive) {
             stopAutoSession();
         } else {
-            const target = parseInt(autoSessionInput?.value, 10);
-            if (isNaN(target) || target <= 0) {
-                alert("Please enter a valid number of searches.");
-                return;
+            // If we have some progress, resume instead of starting over
+            if (autoSessionCurrent > 0 && autoSessionCurrent < autoSessionTarget) {
+                resumeAutoSession();
+            } else {
+                const target = parseInt(autoSessionInput?.value, 10);
+                if (isNaN(target) || target <= 0) {
+                    alert("Please enter a valid number of searches.");
+                    return;
+                }
+                startAutoSession(target);
             }
-            startAutoSession(target);
         }
+    }
+
+    /**
+     * Resumes an existing session.
+     */
+    async function resumeAutoSession() {
+        autoSessionActive = true;
+        await browser.storage.local.set({ autoSessionActive: true });
+        updateSessionUI();
+
+        // Ensure autoSearch is enabled
+        if (!autoSearchEnabled) {
+            autoSearchEnabled = true;
+            if (autoSearchCheckbox) autoSearchCheckbox.checked = true;
+            await browser.storage.local.set({ autoSearchEnabled: true });
+        }
+
+        scheduleNextSessionSearch(1500);
     }
 
     /**
@@ -1290,7 +1324,7 @@
         }
 
         // Start the first search after a short delay
-        scheduleNextSessionSearch(2000);
+        scheduleNextSessionSearch(1500);
     }
 
     /**
@@ -1306,6 +1340,15 @@
         await browser.storage.local.set({ autoSessionActive: false });
         updateSessionUI();
         console.log("Auto-search session stopped.");
+
+        // If it was stopped because it reached target, show notification
+        if (autoSessionCurrent >= autoSessionTarget) {
+            browser.runtime.sendMessage({
+                type: "showNotification",
+                title: t('notifSessionDoneTitle'),
+                message: t('notifSessionDoneBody', [autoSessionTarget])
+            }).catch(err => console.error("Error sending session notification:", err));
+        }
     }
 
     /**
@@ -1357,6 +1400,11 @@
             autoSessionButton.textContent = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
             autoSessionButton.style.backgroundColor = autoSessionActive ? '#dc3545' : '#007bff';
         }
+        if (minimizedSessionButton) {
+            minimizedSessionButton.textContent = autoSessionActive ? '⏸️' : '▶️';
+            minimizedSessionButton.style.backgroundColor = autoSessionActive ? '#dc3545' : '#007bff';
+            minimizedSessionButton.title = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
+        }
         if (autoSessionStatusLabel) {
             autoSessionStatusLabel.textContent = autoSessionActive ? t('statusSession', [autoSessionCurrent, autoSessionTarget]) : '';
         }
@@ -1372,7 +1420,8 @@
      */
     let autoScrollTimeout = null;
     async function performAutoScroll() {
-        if (!autoScrollEnabled) return;
+        // Auto-scroll only runs if enabled AND a session is active
+        if (!autoScrollEnabled || !autoSessionActive) return;
 
         // If the widget is being dragged or typing is in progress, pause scrolling
         if (isDragging || isTyping) {
@@ -1386,7 +1435,7 @@
         const burstCount = randBurst < 0.6 ? 1 : (randBurst < 0.9 ? 2 : 3);
 
         for (let i = 0; i < burstCount; i++) {
-            if (!autoScrollEnabled || isDragging || isTyping) break;
+            if (!autoScrollEnabled || !autoSessionActive || isDragging || isTyping) break;
 
             // Determine scroll amount (100-400px)
             const scrollAmount = Math.floor(Math.random() * 300) + 100;

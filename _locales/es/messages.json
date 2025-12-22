@@ -127,5 +127,11 @@
     },
     "statusSession": {
       "message": "Sesión: $1 / $2"
+    },
+    "notifSessionDoneTitle": {
+      "message": "Sesión completada"
+    },
+    "notifSessionDoneBody": {
+      "message": "Se han realizado las $1 búsquedas programadas."
     }
   }

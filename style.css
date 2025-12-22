@@ -84,10 +84,10 @@
 }
 
 /* Minimized search button */
-#bing-timer-helper #bing-minimized-search-button {
+/* Minimized buttons */
+#bing-timer-helper #bing-minimized-search-button,
+#bing-timer-helper #bing-minimized-session-button {
     display: none !important;
-    background-color: #28a745;
-    border: 1px solid #1e7e34;
     cursor: pointer;
     font-size: 14px;
     width: 32px;
@@ -99,16 +99,31 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    margin-right: auto;
     box-sizing: border-box;
-    /* Push center text */
+}
+
+#bing-timer-helper #bing-minimized-search-button {
+    background-color: #28a745;
+    border: 1px solid #1e7e34;
+    margin-right: 5px;
 }
 
 #bing-timer-helper #bing-minimized-search-button:hover {
     background-color: #218838;
 }
 
-#bing-timer-helper.minimized-widget #bing-minimized-search-button {
+#bing-timer-helper #bing-minimized-session-button {
+    background-color: #007bff;
+    border: 1px solid #0069d9;
+    margin-right: auto;
+}
+
+#bing-timer-helper #bing-minimized-session-button:hover {
+    background-color: #0069d9;
+}
+
+#bing-timer-helper.minimized-widget #bing-minimized-search-button,
+#bing-timer-helper.minimized-widget #bing-minimized-session-button {
     display: flex !important;
 }
 
