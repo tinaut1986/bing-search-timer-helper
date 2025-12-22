@@ -106,5 +106,11 @@
   },
   "btnMaximize": {
     "message": "Maximiser"
+  },
+  "chkAutoScroll": {
+    "message": "Défilement auto?"
+  },
+  "tooltipAutoScroll": {
+    "message": "Simule une personne regardant la page en faisant défiler doucement."
   }
 }

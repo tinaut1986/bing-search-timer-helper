@@ -32,11 +32,12 @@
 
     // --- Interface Element Variables ---
     let container, dragHandle, handleText, timerTitle, timerDisplay, searchTitle, searchInput, copyButton, newSearchButton, showUsedButton;
-    let optionsButton, pasteSearchButton, autoSearchCheckbox, simulateTypingCheckbox, autoSearchLabel, simulateTypingLabel;
+    let optionsButton, pasteSearchButton, autoSearchCheckbox, simulateTypingCheckbox, autoScrollCheckbox, autoSearchLabel, simulateTypingLabel, autoScrollLabel;
     let minimizeButton, minimizedSearchButton;
 
     let autoSearchEnabled = false;      // Loaded/saved state
     let simulateTypingEnabled = false;  // Loaded/saved state
+    let autoScrollEnabled = false;      // Loaded/saved state
     let isMinimized = false;            // Current minimized state
     let savedPosBeforeMinimize = { x: 0, y: 0 }; // Position to restore to
 
@@ -806,8 +807,28 @@
         row2.appendChild(simulateTypingCheckbox);
         row2.appendChild(simulateTypingLabel);
 
+        // Auto Scroll Checkbox
+        autoScrollCheckbox = document.createElement('input');
+        autoScrollCheckbox.type = 'checkbox';
+        autoScrollCheckbox.id = 'bing-auto-scroll-check';
+        autoScrollCheckbox.checked = autoScrollEnabled;
+        autoScrollCheckbox.style.marginRight = '5px';
+        autoScrollCheckbox.style.verticalAlign = 'middle';
+
+        autoScrollLabel = document.createElement('label');
+        autoScrollLabel.htmlFor = 'bing-auto-scroll-check';
+        autoScrollLabel.textContent = t('chkAutoScroll');
+        autoScrollLabel.title = t('tooltipAutoScroll');
+        autoScrollLabel.style.cursor = 'pointer';
+
+        const row3 = document.createElement('div');
+        row3.className = 'option-row';
+        row3.appendChild(autoScrollCheckbox);
+        row3.appendChild(autoScrollLabel);
+
         optionsDiv.appendChild(row1);
         optionsDiv.appendChild(row2);
+        optionsDiv.appendChild(row3);
 
 
         // --- Button Group Container ---
@@ -866,6 +887,9 @@
         if (simulateTypingCheckbox) {
             simulateTypingCheckbox.addEventListener('change', handleCheckboxChange);
         }
+        if (autoScrollCheckbox) {
+            autoScrollCheckbox.addEventListener('change', handleCheckboxChange);
+        }
 
         // Drag listeners
         if (dragHandle) {
@@ -905,6 +929,11 @@
             simulateTypingEnabled = isChecked;
             settingToSave = { simulateTypingEnabled: isChecked };
             console.log(`Checkbox: Simulate Typing set to ${isChecked}`);
+        } else if (checkboxId === 'bing-auto-scroll-check') {
+            autoScrollEnabled = isChecked;
+            settingToSave = { autoScrollEnabled: isChecked };
+            console.log(`Checkbox: Auto Scroll set to ${isChecked}`);
+            toggleAutoScroll(isChecked);
         } else {
             return; // Unknown checkbox
         }
@@ -1127,6 +1156,79 @@
                 }
                 console.log("Buttons re-enabled.");
             }, reEnableDelay);
+        }
+    }
+
+    /**
+     * Performs a smooth, human-like scroll on the page.
+     * Randomly scrolls down, occasionally scrolls up, and repeats after a delay.
+     */
+    let autoScrollTimeout = null;
+    async function performAutoScroll() {
+        if (!autoScrollEnabled) return;
+
+        // If the widget is being dragged, pause scrolling
+        if (isDragging) {
+            autoScrollTimeout = setTimeout(performAutoScroll, 2000);
+            return;
+        }
+
+        // Determine how many scrolls to do in this "burst" (1 to 3)
+        // 60% chance for 1 scroll, 30% for 2, 10% for 3
+        const randBurst = Math.random();
+        const burstCount = randBurst < 0.6 ? 1 : (randBurst < 0.9 ? 2 : 3);
+
+        for (let i = 0; i < burstCount; i++) {
+            if (!autoScrollEnabled || isDragging) break;
+
+            // Determine scroll amount (100-400px)
+            const scrollAmount = Math.floor(Math.random() * 300) + 100;
+
+            // 15% chance to scroll up instead of down, but mostly down
+            const isUp = Math.random() < 0.15;
+            const direction = isUp ? -1 : 1;
+
+            // Apply scroll
+            window.scrollBy({
+                top: scrollAmount * direction,
+                behavior: 'smooth'
+            });
+
+            // If we hit the bottom, scroll up a bit to simulate "looking back"
+            const isAtBottom = (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 100;
+            if (isAtBottom && direction === 1) {
+                await new Promise(r => setTimeout(r, 800));
+                window.scrollBy({ top: -Math.floor(Math.random() * 400 + 200), behavior: 'smooth' });
+                break; // Stop burst if we hit bottom
+            }
+
+            // Small delay between scrolls in a burst (realistic "reading" or "skimming")
+            if (i < burstCount - 1) {
+                await new Promise(r => setTimeout(r, Math.random() * 800 + 400));
+            }
+        }
+
+        // Schedule next burst (4 - 10 seconds)
+        const nextDelay = Math.random() * 6000 + 4000;
+        autoScrollTimeout = setTimeout(performAutoScroll, nextDelay);
+    }
+
+    /**
+     * Toggles the auto-scroll mechanism.
+     * @param {boolean} enable - True to start, false to stop.
+     */
+    function toggleAutoScroll(enable) {
+        autoScrollEnabled = enable;
+        if (autoScrollTimeout) {
+            clearTimeout(autoScrollTimeout);
+            autoScrollTimeout = null;
+        }
+        if (autoScrollEnabled) {
+            console.log("Auto-scroll started.");
+            // Start after a short initial delay
+            autoScrollTimeout = setTimeout(performAutoScroll, 2000);
+        } else {
+            console.log("Auto-scroll stopped.");
         }
     }
 
@@ -1396,6 +1498,7 @@
                 userNumbers: null, userAesthetics: null,
                 autoSearchEnabled: false,      // Defaults to false
                 simulateTypingEnabled: false,  // Defaults to false
+                autoScrollEnabled: false,      // Defaults to false
                 isMinimized: false,
                 savedPosX: null,
                 savedPosY: null
@@ -1408,6 +1511,7 @@
             const loadedUsedSearches = userData.usedSearchesToday ?? [];
             autoSearchEnabled = userData.autoSearchEnabled ?? false;
             simulateTypingEnabled = userData.simulateTypingEnabled ?? false;
+            autoScrollEnabled = userData.autoScrollEnabled ?? false;
             isMinimized = userData.isMinimized ?? false;
             savedPosBeforeMinimize = {
                 x: userData.savedPosX ?? 0,
@@ -1508,9 +1612,12 @@
                 }
             }, 100); // Delay ensures element is rendered and has dimensions
 
-            // 10. Start Timer and Observers
+            // 10. Start Timer, Observers and Auto-scroll
             startTimer();
             observeChanges();
+            if (autoScrollEnabled) {
+                toggleAutoScroll(true);
+            }
 
             // Add resize listener
             window.addEventListener('resize', debounce(handleResize, 250));
