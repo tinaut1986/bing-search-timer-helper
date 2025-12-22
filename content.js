@@ -40,6 +40,17 @@
     let autoScrollEnabled = false;      // Loaded/saved state
     let isMinimized = false;            // Current minimized state
     let savedPosBeforeMinimize = { x: 0, y: 0 }; // Position to restore to
+    let isTyping = false;               // Is simulation typing in progress?
+
+    // --- Interface Element Variables ---
+    let totalTodayLabel; // New variable for total searches today display
+
+    // --- Auto-Search Session Variables ---
+    let autoSessionActive = false;
+    let autoSessionTarget = 30;
+    let autoSessionCurrent = 0;
+    let autoSessionTimeout = null;
+    let autoSessionInput, autoSessionButton, autoSessionStatusLabel;
 
     // --- URL Tracking Variable ---
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
@@ -830,11 +841,70 @@
         optionsDiv.appendChild(row2);
         optionsDiv.appendChild(row3);
 
+        // --- Auto-Search Session Controls ---
+        const sessionDiv = document.createElement('div');
+        sessionDiv.id = 'bing-session-controls';
+        sessionDiv.style.marginTop = '15px';
+        sessionDiv.style.padding = '10px';
+        sessionDiv.style.backgroundColor = '#f8f9fa';
+        sessionDiv.style.border = '1px solid #ddd';
+        sessionDiv.style.borderRadius = '6px';
+
+        const sessionTitle = document.createElement('div');
+        sessionTitle.textContent = t('lblAutoSessionCount');
+        sessionTitle.style.fontSize = '12px';
+        sessionTitle.style.fontWeight = 'bold';
+        sessionTitle.style.marginBottom = '5px';
+
+        const sessionInputRow = document.createElement('div');
+        sessionInputRow.className = 'option-row';
+        sessionInputRow.style.justifyContent = 'space-between';
+
+        autoSessionInput = document.createElement('input');
+        autoSessionInput.type = 'number';
+        autoSessionInput.id = 'bing-session-target';
+        autoSessionInput.value = autoSessionTarget;
+        autoSessionInput.min = 1;
+        autoSessionInput.max = 100;
+        autoSessionInput.style.width = '50px';
+        autoSessionInput.style.padding = '4px';
+
+        autoSessionButton = document.createElement('button');
+        autoSessionButton.id = 'bing-session-button';
+        autoSessionButton.textContent = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
+        autoSessionButton.style.flexGrow = '1';
+        autoSessionButton.style.marginLeft = '10px';
+        autoSessionButton.style.padding = '5px 10px';
+        autoSessionButton.style.backgroundColor = autoSessionActive ? '#dc3545' : '#007bff';
+        autoSessionButton.style.color = 'white';
+        autoSessionButton.style.border = 'none';
+
+        autoSessionStatusLabel = document.createElement('div');
+        autoSessionStatusLabel.id = 'bing-session-status';
+        autoSessionStatusLabel.style.fontSize = '12px';
+        autoSessionStatusLabel.style.marginTop = '5px';
+        autoSessionStatusLabel.style.textAlign = 'center';
+        autoSessionStatusLabel.textContent = autoSessionActive ? t('statusSession', [autoSessionCurrent, autoSessionTarget]) : '';
+
+        totalTodayLabel = document.createElement('div');
+        totalTodayLabel.id = 'bing-total-today';
+        totalTodayLabel.style.fontSize = '11px';
+        totalTodayLabel.style.marginTop = '8px';
+        totalTodayLabel.style.color = '#777';
+        totalTodayLabel.style.textAlign = 'center';
+        totalTodayLabel.textContent = t('lblTotalToday', [usedSearchesToday.length]);
+
+        sessionInputRow.appendChild(autoSessionInput);
+        sessionInputRow.appendChild(autoSessionButton);
+        sessionDiv.appendChild(sessionTitle);
+        sessionDiv.appendChild(sessionInputRow);
+        sessionDiv.appendChild(autoSessionStatusLabel);
+        sessionDiv.appendChild(totalTodayLabel);
 
         // --- Button Group Container ---
         const buttonGroup = document.createElement('div');
         buttonGroup.className = 'button-group'; // Optional class for styling group
-        buttonGroup.style.marginTop = '5px';
+        buttonGroup.style.marginTop = '10px';
         // Order of buttons matters for the :first-child CSS rule
         buttonGroup.appendChild(pasteSearchButton);
         buttonGroup.appendChild(copyButton);
@@ -848,6 +918,7 @@
         contentWrapper.appendChild(searchTitle);
         contentWrapper.appendChild(searchInput);
         contentWrapper.appendChild(optionsDiv);
+        contentWrapper.appendChild(sessionDiv);
         contentWrapper.appendChild(buttonGroup);
 
         // --- Assemble Main Container ---
@@ -889,6 +960,16 @@
         }
         if (autoScrollCheckbox) {
             autoScrollCheckbox.addEventListener('change', handleCheckboxChange);
+        }
+
+        if (autoSessionButton) {
+            autoSessionButton.addEventListener('click', toggleAutoSession);
+        }
+        if (autoSessionInput) {
+            autoSessionInput.addEventListener('change', (e) => {
+                autoSessionTarget = parseInt(e.target.value, 10) || 30;
+                browser.storage.local.set({ autoSessionTarget });
+            });
         }
 
         // Drag listeners
@@ -960,6 +1041,7 @@
  */
     async function simulateTyping(inputElement, textToType, minDelay = 40, maxDelay = 120) {
         console.log(`Simulating realistic typing for: "${textToType}"`);
+        isTyping = true;
         inputElement.value = '';
         inputElement.focus();
 
@@ -1037,6 +1119,7 @@
 
         inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         console.log("Realistic typing complete.");
+        isTyping = false;
     }
 
     /**
@@ -1062,6 +1145,11 @@
                     lastUsedDate: today,
                     usedSearchesToday: usedSearchesToday
                 });
+
+                // Update the total today label
+                if (totalTodayLabel) {
+                    totalTodayLabel.textContent = t('lblTotalToday', [usedSearchesToday.length]);
+                }
             } catch (err) {
                 console.error("Failed to save updated used search list:", err);
             }
@@ -1156,8 +1244,127 @@
                 }
                 console.log("Buttons re-enabled.");
             }, reEnableDelay);
+
+            // If a session is active, we don't increment here because the page will reload
+            // and initialize() will handle the next step.
         }
     }
+
+    /**
+     * Toggles the automated search session.
+     */
+    async function toggleAutoSession() {
+        if (autoSessionActive) {
+            stopAutoSession();
+        } else {
+            const target = parseInt(autoSessionInput?.value, 10);
+            if (isNaN(target) || target <= 0) {
+                alert("Please enter a valid number of searches.");
+                return;
+            }
+            startAutoSession(target);
+        }
+    }
+
+    /**
+     * Starts a new search session.
+     */
+    async function startAutoSession(target) {
+        autoSessionActive = true;
+        autoSessionTarget = target;
+        autoSessionCurrent = 0;
+
+        await browser.storage.local.set({
+            autoSessionActive: true,
+            autoSessionTarget: target,
+            autoSessionCurrent: 0
+        });
+
+        updateSessionUI();
+
+        // Ensure autoSearch is enabled for the session to work
+        if (!autoSearchEnabled) {
+            autoSearchEnabled = true;
+            if (autoSearchCheckbox) autoSearchCheckbox.checked = true;
+            await browser.storage.local.set({ autoSearchEnabled: true });
+        }
+
+        // Start the first search after a short delay
+        scheduleNextSessionSearch(2000);
+    }
+
+    /**
+     * Stops the current session.
+     */
+    async function stopAutoSession() {
+        autoSessionActive = false;
+        if (autoSessionTimeout) {
+            clearTimeout(autoSessionTimeout);
+            autoSessionTimeout = null;
+        }
+
+        await browser.storage.local.set({ autoSessionActive: false });
+        updateSessionUI();
+        console.log("Auto-search session stopped.");
+    }
+
+    /**
+     * Schedules the next search in the session with randomized delay.
+     */
+    function scheduleNextSessionSearch(delay) {
+        if (autoSessionTimeout) clearTimeout(autoSessionTimeout);
+
+        const finalDelay = delay || getRandomSessionDelay();
+        console.log(`Next session search in ${Math.round(finalDelay / 1000)}s`);
+
+        autoSessionTimeout = setTimeout(async () => {
+            if (!autoSessionActive) return;
+
+            // Generate and paste
+            await updateSearchDisplay(); // Get new suggestion
+
+            // We need to increment the counter BEFORE pasting/clicking because the page will reload
+            autoSessionCurrent++;
+            await browser.storage.local.set({ autoSessionCurrent });
+
+            updateSessionUI();
+
+            // Perform paste and search
+            pasteSuggestionToSearchBox();
+
+        }, finalDelay);
+    }
+
+    /**
+     * Generates a random delay for the session searches.
+     * User requested: Mostly > 10s, occasionally 5-10s.
+     */
+    function getRandomSessionDelay() {
+        // 80% chance for 11-16 seconds, 20% chance for 6-9 seconds
+        const isShort = Math.random() < 0.2;
+        if (isShort) {
+            return Math.floor(Math.random() * 3000) + 6000; // 6-9s
+        } else {
+            return Math.floor(Math.random() * 5000) + 11000; // 11-16s
+        }
+    }
+
+    /**
+     * Updates the UI elements related to the session.
+     */
+    function updateSessionUI() {
+        if (autoSessionButton) {
+            autoSessionButton.textContent = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
+            autoSessionButton.style.backgroundColor = autoSessionActive ? '#dc3545' : '#007bff';
+        }
+        if (autoSessionStatusLabel) {
+            autoSessionStatusLabel.textContent = autoSessionActive ? t('statusSession', [autoSessionCurrent, autoSessionTarget]) : '';
+        }
+        if (autoSessionInput) {
+            autoSessionInput.disabled = autoSessionActive;
+        }
+    }
+
 
     /**
      * Performs a smooth, human-like scroll on the page.
@@ -1167,8 +1374,8 @@
     async function performAutoScroll() {
         if (!autoScrollEnabled) return;
 
-        // If the widget is being dragged, pause scrolling
-        if (isDragging) {
+        // If the widget is being dragged or typing is in progress, pause scrolling
+        if (isDragging || isTyping) {
             autoScrollTimeout = setTimeout(performAutoScroll, 2000);
             return;
         }
@@ -1179,7 +1386,7 @@
         const burstCount = randBurst < 0.6 ? 1 : (randBurst < 0.9 ? 2 : 3);
 
         for (let i = 0; i < burstCount; i++) {
-            if (!autoScrollEnabled || isDragging) break;
+            if (!autoScrollEnabled || isDragging || isTyping) break;
 
             // Determine scroll amount (100-400px)
             const scrollAmount = Math.floor(Math.random() * 300) + 100;
@@ -1499,6 +1706,9 @@
                 autoSearchEnabled: false,      // Defaults to false
                 simulateTypingEnabled: false,  // Defaults to false
                 autoScrollEnabled: false,      // Defaults to false
+                autoSessionActive: false,
+                autoSessionTarget: 30,
+                autoSessionCurrent: 0,
                 isMinimized: false,
                 savedPosX: null,
                 savedPosY: null
@@ -1512,6 +1722,9 @@
             autoSearchEnabled = userData.autoSearchEnabled ?? false;
             simulateTypingEnabled = userData.simulateTypingEnabled ?? false;
             autoScrollEnabled = userData.autoScrollEnabled ?? false;
+            autoSessionActive = userData.autoSessionActive ?? false;
+            autoSessionTarget = userData.autoSessionTarget ?? 30;
+            autoSessionCurrent = userData.autoSessionCurrent ?? 0;
             isMinimized = userData.isMinimized ?? false;
             savedPosBeforeMinimize = {
                 x: userData.savedPosX ?? 0,
@@ -1617,6 +1830,18 @@
             observeChanges();
             if (autoScrollEnabled) {
                 toggleAutoScroll(true);
+            }
+
+            // --- Handle Session Persistence ---
+            if (autoSessionActive) {
+                if (autoSessionCurrent < autoSessionTarget) {
+                    console.log(`Session active: ${autoSessionCurrent}/${autoSessionTarget}. Resuming...`);
+                    // We just loaded a new page after a search. Wait and continue.
+                    scheduleNextSessionSearch();
+                } else {
+                    console.log("Session target reached. Stopping.");
+                    stopAutoSession();
+                }
             }
 
             // Add resize listener

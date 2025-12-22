@@ -22,5 +22,12 @@
     document.addEventListener('DOMContentLoaded', () => translateFragment());
   } else translateFragment();
   // expose helper
-  window.t = k => browser.i18n.getMessage(k) || k;
+  // expose helper
+  window.t = (k, subs) => {
+    if (subs !== undefined) {
+      if (Array.isArray(subs)) subs = subs.map(s => String(s));
+      else subs = String(subs);
+    }
+    return browser.i18n.getMessage(k, subs) || k;
+  };
 })();

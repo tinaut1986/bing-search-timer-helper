@@ -112,5 +112,20 @@
   },
   "tooltipAutoScroll": {
     "message": "Simula uma pessoa olhando a página fazendo scroll suave."
+  },
+  "lblAutoSessionCount": {
+    "message": "Nº de pesquisas sessão:"
+  },
+  "lblTotalToday": {
+    "message": "Total hoje: $1"
+  },
+  "btnStartSession": {
+    "message": "▶️ Iniciar Sessão"
+  },
+  "btnStopSession": {
+    "message": "⏹️ Parar Sessão"
+  },
+  "statusSession": {
+    "message": "Sessão: $1 / $2"
   }
 }
