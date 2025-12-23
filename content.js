@@ -1665,7 +1665,18 @@
                     if (location.hostname.includes('bing.com') && location.pathname.startsWith('/search') && document.getElementById('bing-timer-helper')) {
                         console.log("SPA Navigation detected. Resetting timer and getting new suggestion.");
                         resetTimer();
+                        startTimer(); // Ensure timer starts again after reset
                         updateSearchDisplay();
+
+                        // Session handling for SPA navigation (common on mobile)
+                        if (autoSessionActive) {
+                            if (autoSessionCurrent < autoSessionTarget) {
+                                console.log(`Session active (SPA): ${autoSessionCurrent}/${autoSessionTarget}. scheduling...`);
+                                scheduleNextSessionSearch();
+                            } else {
+                                stopAutoSession();
+                            }
+                        }
                     } else if (!location.hostname.includes('bing.com')) {
                         stopTimer(); // Stop the timer if we've navigated away from Bing.
                     }

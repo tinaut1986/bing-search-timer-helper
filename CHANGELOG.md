@@ -1,5 +1,11 @@
 # Bing Search Timer Helper - Historial de Cambios
 
+## [1.8.1] - 2025-12-23
+
+### Mejoras y Correcciones
+- **Soporte Móvil (SPA)**: Corregido error donde el cronómetro se detenía al navegar en dispositivos móviles.
+- **Sesión Automática en Móvil**: Las sesiones ahora continúan correctamente en dispositivos móviles sin necesidad de recargar la página manualmente.
+
 ## [1.8.0] - 2025-12-23
 
 ### Nuevas Características
