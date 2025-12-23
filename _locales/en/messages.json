@@ -133,5 +133,20 @@
   },
   "notifSessionDoneBody": {
     "message": "The $1 scheduled searches have been completed."
+  },
+  "disclaimerText": {
+    "message": "This tool is provided 'as is'. The author is not responsible for any possible account bans or limitations. It is not possible to guarantee how Microsoft detects the use of assistance tools. Use at your own risk."
+  },
+  "disclaimerTitle": {
+    "message": "⚠️ Responsibility Disclaimer"
+  },
+  "disclaimerAccept": {
+    "message": "I understand and accept the risks"
+  },
+  "disclaimerNeverShowAgain": {
+    "message": "Do not show this warning again"
+  },
+  "disclaimerCancel": {
+    "message": "Cancel"
   }
 }

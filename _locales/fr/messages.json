@@ -133,5 +133,20 @@
   },
   "notifSessionDoneBody": {
     "message": "Les $1 recherches programmées ont été effectuées."
+  },
+  "disclaimerText": {
+    "message": "Cet outil est fourni 'en l'état'. L'auteur n'est pas responsable des éventuels bannissements ou limitations de votre compte. Il n'est pas possible de garantir comment Microsoft détecte l'utilisation d'outils d'assistance. Utilisez-le à vos propres risques."
+  },
+  "disclaimerTitle": {
+    "message": "⚠️ Avertissement de responsabilité"
+  },
+  "disclaimerAccept": {
+    "message": "Je comprends et accepte les risques"
+  },
+  "disclaimerNeverShowAgain": {
+    "message": "Ne plus afficher ce message"
+  },
+  "disclaimerCancel": {
+    "message": "Annuler"
   }
 }

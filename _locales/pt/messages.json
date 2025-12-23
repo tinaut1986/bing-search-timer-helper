@@ -133,5 +133,20 @@
   },
   "notifSessionDoneBody": {
     "message": "As $1 pesquisas programadas foram realizadas."
+  },
+  "disclaimerText": {
+    "message": "Esta ferramenta é fornecida 'como está'. O autor não se responsabiliza por possíveis banimentos ou limitações na sua conta. Não é possível garantir como a Microsoft deteta o uso de ferramentas de assistência. Use por sua conta e risco."
+  },
+  "disclaimerTitle": {
+    "message": "⚠️ Aviso de Responsabilidade"
+  },
+  "disclaimerAccept": {
+    "message": "Eu entendo e aceito os riscos"
+  },
+  "disclaimerNeverShowAgain": {
+    "message": "Não mostrar esta advertência novamente"
+  },
+  "disclaimerCancel": {
+    "message": "Cancelar"
   }
 }

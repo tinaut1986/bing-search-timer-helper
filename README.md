@@ -70,6 +70,12 @@ To make changes to the extension:
 
 Contributions are welcome! If you have ideas for improvements or find bugs, please feel free to open an issue or submit a pull request.
 
+## Disclaimer / Aviso Legal
+
+**Uso bajo su propio riesgo:** Esta herramienta se proporciona "tal cual" con fines educativos y de productividad. El autor no se hace responsable de posibles baneos, suspensiones o limitaciones aplicadas por Microsoft en su cuenta de Rewards o cualquier otro servicio derivado de Bing. 
+
+No es posible garantizar ni verificar cómo Microsoft detecta el uso de herramientas de automatización o asistencia en las búsquedas. El usuario es el único responsable de cómo utiliza esta extensión y de cumplir con los términos de servicio de las plataformas externas.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

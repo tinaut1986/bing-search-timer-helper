@@ -111,3 +111,18 @@ button {
     color: #383d41;
     border: 1px solid #d6d8db;
 }
+
+.disclaimer {
+    margin-top: 40px;
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.disclaimer p {
+    margin: 0;
+}

@@ -41,6 +41,7 @@
     let isMinimized = false;            // Current minimized state
     let savedPosBeforeMinimize = { x: 0, y: 0 }; // Position to restore to
     let isTyping = false;               // Is simulation typing in progress?
+    let disclaimerConfirmed = false;    // Has user confirmed the disclaimer?
 
     // --- Interface Element Variables ---
     let totalTodayLabel; // New variable for total searches today display
@@ -866,6 +867,18 @@
         sessionTitle.style.fontSize = '12px';
         sessionTitle.style.fontWeight = 'bold';
         sessionTitle.style.marginBottom = '5px';
+        sessionTitle.style.display = 'flex';
+        sessionTitle.style.alignItems = 'center';
+        sessionTitle.style.justifyContent = 'space-between';
+
+        const warningIcon = document.createElement('span');
+        warningIcon.textContent = '⚠️';
+        warningIcon.style.cursor = 'pointer';
+        warningIcon.style.fontSize = '14px';
+        warningIcon.title = t('disclaimerTitle');
+        warningIcon.onclick = () => showDisclaimerModal(() => { });
+
+        sessionTitle.appendChild(warningIcon);
 
         const sessionInputRow = document.createElement('div');
         sessionInputRow.className = 'option-row';
@@ -1286,6 +1299,19 @@
      * Resumes an existing session.
      */
     async function resumeAutoSession() {
+        if (!disclaimerConfirmed) {
+            showDisclaimerModal(() => {
+                resumeAutoSessionLogic();
+            });
+            return;
+        }
+        resumeAutoSessionLogic();
+    }
+
+    /**
+     * Internal logic for resuming.
+     */
+    async function resumeAutoSessionLogic() {
         autoSessionActive = true;
         await browser.storage.local.set({ autoSessionActive: true });
         updateSessionUI();
@@ -1301,9 +1327,130 @@
     }
 
     /**
+     * Shows a custom disclaimer modal.
+     * @param {Function} onAccept - Callback when accepted.
+     */
+    function showDisclaimerModal(onAccept) {
+        const overlay = document.createElement('div');
+        overlay.id = 'bing-disclaimer-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        overlay.style.zIndex = '2147483647';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.padding = '20px';
+
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = 'white';
+        modal.style.padding = '30px';
+        modal.style.borderRadius = '12px';
+        modal.style.maxWidth = '450px';
+        modal.style.width = '100%';
+        modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+        modal.style.textAlign = 'center';
+        modal.style.fontFamily = 'sans-serif';
+
+        const title = document.createElement('h2');
+        title.textContent = t('disclaimerTitle');
+        title.style.margin = '0 0 15px 0';
+        title.style.fontSize = '20px';
+        title.style.color = '#333';
+
+        const content = document.createElement('p');
+        content.textContent = t('disclaimerText');
+        content.style.fontSize = '14px';
+        content.style.lineHeight = '1.5';
+        content.style.color = '#555';
+        content.style.marginBottom = '20px';
+
+        const checkRow = document.createElement('label');
+        checkRow.style.display = 'flex';
+        checkRow.style.alignItems = 'center';
+        checkRow.style.justifyContent = 'center';
+        checkRow.style.gap = '8px';
+        checkRow.style.marginBottom = '20px';
+        checkRow.style.cursor = 'pointer';
+        checkRow.style.fontSize = '13px';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.cursor = 'pointer';
+        checkbox.checked = disclaimerConfirmed;
+
+        const checkText = document.createElement('span');
+        checkText.textContent = t('disclaimerNeverShowAgain');
+
+        checkRow.appendChild(checkbox);
+        checkRow.appendChild(checkText);
+
+        const btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '10px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = t('disclaimerCancel');
+        cancelBtn.style.flex = '1';
+        cancelBtn.style.padding = '12px';
+        cancelBtn.style.backgroundColor = '#6c757d';
+        cancelBtn.style.color = 'white';
+        cancelBtn.style.border = 'none';
+        cancelBtn.style.borderRadius = '6px';
+        cancelBtn.style.fontSize = '16px';
+        cancelBtn.style.fontWeight = 'bold';
+        cancelBtn.style.cursor = 'pointer';
+        cancelBtn.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+
+        const acceptBtn = document.createElement('button');
+        acceptBtn.textContent = t('disclaimerAccept');
+        acceptBtn.style.flex = '2';
+        acceptBtn.style.padding = '12px';
+        acceptBtn.style.backgroundColor = '#28a745';
+        acceptBtn.style.color = 'white';
+        acceptBtn.style.border = 'none';
+        acceptBtn.style.borderRadius = '6px';
+        acceptBtn.style.fontSize = '16px';
+        acceptBtn.style.fontWeight = 'bold';
+        acceptBtn.style.cursor = 'pointer';
+
+        acceptBtn.onclick = async () => {
+            disclaimerConfirmed = checkbox.checked;
+            await browser.storage.local.set({ disclaimerConfirmed: checkbox.checked });
+            document.body.removeChild(overlay);
+            onAccept();
+        };
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(acceptBtn);
+
+        modal.appendChild(title);
+        modal.appendChild(content);
+        modal.appendChild(checkRow);
+        modal.appendChild(btnRow);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+    /**
      * Starts a new search session.
      */
     async function startAutoSession(target) {
+        if (!disclaimerConfirmed) {
+            showDisclaimerModal(() => {
+                startAutoSessionInternal(target);
+            });
+            return;
+        }
+        startAutoSessionInternal(target);
+    }
+
+    /**
+     * Internal logic after disclaimer.
+     */
+    async function startAutoSessionInternal(target) {
         autoSessionActive = true;
         autoSessionTarget = target;
         autoSessionCurrent = 0;
@@ -1759,6 +1906,7 @@
                 autoSessionTarget: 30,
                 autoSessionCurrent: 0,
                 isMinimized: false,
+                disclaimerConfirmed: false,
                 savedPosX: null,
                 savedPosY: null
             });
@@ -1775,6 +1923,7 @@
             autoSessionTarget = userData.autoSessionTarget ?? 30;
             autoSessionCurrent = userData.autoSessionCurrent ?? 0;
             isMinimized = userData.isMinimized ?? false;
+            disclaimerConfirmed = userData.disclaimerConfirmed ?? false;
             savedPosBeforeMinimize = {
                 x: userData.savedPosX ?? 0,
                 y: userData.savedPosY ?? 0

@@ -133,5 +133,20 @@
   },
   "notifSessionDoneBody": {
     "message": "S'han realitzat les $1 cerques programades."
+  },
+  "disclaimerText": {
+    "message": "Aquesta eina es proporciona 'tal com està'. L'autor no es fa responsable de possibles bannejos o limitacions al seu compte. No es pot garantir com Microsoft detecta l'ús d'eines d'assistència. Utilitzeu-la sota el vostre propi risc."
+  },
+  "disclaimerTitle": {
+    "message": "⚠️ Aviso de Responsabilitat"
+  },
+  "disclaimerAccept": {
+    "message": "Eu entendo i accepto els riscos"
+  },
+  "disclaimerNeverShowAgain": {
+    "message": "No mostrar aquesta advertència de nou"
+  },
+  "disclaimerCancel": {
+    "message": "Cancel·lar"
   }
 }
