@@ -327,7 +327,8 @@
             const timeStr = formatTime(secondsRemaining);
             timerDisplay.textContent = timeStr;
             if (isMinimized && handleText) {
-                handleText.textContent = timeStr;
+                const timeDisplay = secondsRemaining <= 0 && timerStartTime === null ? t('timerGoalReached') : timeStr;
+                handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
             }
 
             // Apply color logic
@@ -425,8 +426,11 @@
         timerStartTime = null;
 
         if (goalReached && timerDisplay) {
-            timerDisplay.textContent = "¡Objetivo!";
+            timerDisplay.textContent = t('timerGoalReached');
             timerDisplay.style.color = 'red';
+            if (isMinimized && handleText) {
+                handleText.textContent = autoSessionActive ? `${t('timerGoalReached')} | ${autoSessionCurrent}/${autoSessionTarget}` : t('timerGoalReached');
+            }
         }
     }
 
@@ -527,7 +531,12 @@
                 const now = Date.now();
                 const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
                 const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
-                handleText.textContent = formatTime(secondsRemaining);
+                const timeStr = formatTime(secondsRemaining);
+                // Check if we should show the goal text
+                const isGoal = !timerActive && secondsRemaining <= 0 && timerStartTime === null;
+                const timeDisplay = isGoal ? t('timerGoalReached') : timeStr;
+                
+                handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
             }
         } else {
             // --- Maximizing ---
@@ -1617,6 +1626,18 @@
         }
         if (autoSessionInput) {
             autoSessionInput.disabled = autoSessionActive;
+        }
+
+        // Update minimized text to reflect session counter change immediately
+        if (isMinimized && handleText) {
+            const now = Date.now();
+            const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
+            const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
+            const timeStr = formatTime(secondsRemaining);
+            const isGoal = !timerActive && secondsRemaining <= 0 && timerStartTime === null;
+            const timeDisplay = isGoal ? t('timerGoalReached') : timeStr;
+            
+            handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
         }
     }
 

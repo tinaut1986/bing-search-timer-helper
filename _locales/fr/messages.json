@@ -148,5 +148,8 @@
   },
   "disclaimerCancel": {
     "message": "Annuler"
+  },
+  "timerGoalReached": {
+    "message": "Objectif atteint!"
   }
 }
