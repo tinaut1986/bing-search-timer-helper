@@ -1,5 +1,16 @@
 # Bing Search Timer Helper - Historial de Cambios
 
+## [1.8.2] - 2025-12-29
+
+### Nuevas Características
+- **Estado de Sesión en Widget Minimizado**: Ahora el widget muestra el progreso de la sesión (X/Y) y el temporizador directamente en el texto del manejador cuando está minimizado.
+- **Prevención de Suspensión (Wake Lock)**: Implementado el uso de Screen Wake Lock para mantener el dispositivo encendido durante las sesiones automáticas, ideal para uso en móviles.
+- **Aviso de Objetivo**: El temporizador ahora muestra explícitamente "¡Objetivo alcanzado!" al finalizar el tiempo programado.
+
+### Mejoras y Correcciones
+- **Internacionalización**: Reforzado el sistema de traducciones con soporte para parámetros dinámicos y nuevas etiquetas.
+- **Estabilidad de UI**: Mejoras en la persistencia del estado (minimizado/maximizado) y posicionamiento del widget.
+
 ## [1.8.1] - 2025-12-23
 
 ### Mejoras y Correcciones
