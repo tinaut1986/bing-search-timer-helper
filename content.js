@@ -59,6 +59,7 @@
     let autoSessionCurrent = 0;
     let autoSessionTimeout = null;
     let autoSessionInput, autoSessionButton, autoSessionStatusLabel, minimizedSessionButton;
+    let wakeLock = null; // Variable for Screen Wake Lock
 
     // --- URL Tracking Variable ---
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
@@ -66,6 +67,48 @@
     // ==================================
     // === Utility Helper Functions ===
     // ==================================
+
+    /**
+     * Request a Screen Wake Lock to prevent the device from sleeping.
+     */
+    async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake Lock active');
+                wakeLock.addEventListener('release', () => {
+                    console.log('Wake Lock released');
+                });
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+            }
+        } else {
+            console.log('Wake Lock API not supported in this browser.');
+        }
+    }
+
+    /**
+     * Release the Screen Wake Lock.
+     */
+    async function releaseWakeLock() {
+        if (wakeLock) {
+            try {
+                await wakeLock.release();
+                wakeLock = null;
+            } catch (err) {
+                console.error('Wake Lock release error', err);
+            }
+        }
+    }
+
+    // Re-acquire wake lock on visibility change if session is active
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+            await requestWakeLock();
+        } else if (autoSessionActive && document.visibilityState === 'visible') {
+            await requestWakeLock();
+        }
+    });
 
     /**
      * Formats a number of seconds into MM:SS format.
@@ -414,7 +457,8 @@
             const timeStr = formatTime(secondsRemaining);
             timerDisplay.textContent = timeStr;
             if (isMinimized && handleText) {
-                handleText.textContent = timeStr;
+                const timeDisplay = secondsRemaining <= 0 && timerStartTime === null ? t('timerGoalReached') : timeStr;
+                handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
             }
 
             // Apply color logic
@@ -512,8 +556,11 @@
         timerStartTime = null;
 
         if (goalReached && timerDisplay) {
-            timerDisplay.textContent = "¡Objetivo!";
+            timerDisplay.textContent = t('timerGoalReached');
             timerDisplay.style.color = 'red';
+            if (isMinimized && handleText) {
+                handleText.textContent = autoSessionActive ? `${t('timerGoalReached')} | ${autoSessionCurrent}/${autoSessionTarget}` : t('timerGoalReached');
+            }
         }
     }
 
@@ -614,7 +661,12 @@
                 const now = Date.now();
                 const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
                 const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
-                handleText.textContent = formatTime(secondsRemaining);
+                const timeStr = formatTime(secondsRemaining);
+                // Check if we should show the goal text
+                const isGoal = !timerActive && secondsRemaining <= 0 && timerStartTime === null;
+                const timeDisplay = isGoal ? t('timerGoalReached') : timeStr;
+                
+                handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
             }
         } else {
             // --- Maximizing ---
@@ -1493,6 +1545,8 @@
         await browser.storage.local.set({ autoSessionActive: true });
         updateSessionUI();
 
+        requestWakeLock(); // Request Wake Lock when resuming
+
         // Ensure autoSearch is enabled
         if (!autoSearchEnabled) {
             autoSearchEnabled = true;
@@ -1639,6 +1693,7 @@
         });
 
         updateSessionUI();
+        requestWakeLock(); // Request Wake Lock when starting
 
         // Ensure autoSearch is enabled for the session to work
         if (!autoSearchEnabled) {
@@ -1661,16 +1716,30 @@
             autoSessionTimeout = null;
         }
 
-        await browser.storage.local.set({ autoSessionActive: false });
+        // Capture current state for notification logic
+        const wasTargetReached = autoSessionCurrent >= autoSessionTarget;
+        const currentTarget = autoSessionTarget;
+
+        // Reset the counter to 0 as requested
+        autoSessionCurrent = 0;
+
+        // Update storage with reset counter
+        await browser.storage.local.set({
+            autoSessionActive: false,
+            autoSessionCurrent: 0
+        });
+
+        releaseWakeLock(); // Release Wake Lock
+
         updateSessionUI();
         console.log("Auto-search session stopped.");
 
         // If it was stopped because it reached target, show notification
-        if (autoSessionCurrent >= autoSessionTarget) {
+        if (wasTargetReached) {
             browser.runtime.sendMessage({
                 type: "showNotification",
                 title: t('notifSessionDoneTitle'),
-                message: t('notifSessionDoneBody', [autoSessionTarget])
+                message: t('notifSessionDoneBody', [currentTarget])
             }).catch(err => console.error("Error sending session notification:", err));
         }
     }
@@ -1734,6 +1803,18 @@
         }
         if (autoSessionInput) {
             autoSessionInput.disabled = autoSessionActive;
+        }
+
+        // Update minimized text to reflect session counter change immediately
+        if (isMinimized && handleText) {
+            const now = Date.now();
+            const elapsedSeconds = timerStartTime ? Math.floor((now - timerStartTime) / 1000) : 0;
+            const secondsRemaining = Math.max(0, TARGET_SECONDS - elapsedSeconds);
+            const timeStr = formatTime(secondsRemaining);
+            const isGoal = !timerActive && secondsRemaining <= 0 && timerStartTime === null;
+            const timeDisplay = isGoal ? t('timerGoalReached') : timeStr;
+            
+            handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
         }
     }
 
@@ -2241,6 +2322,7 @@
             if (autoSessionActive) {
                 if (autoSessionCurrent < autoSessionTarget) {
                     console.log(`Session active: ${autoSessionCurrent}/${autoSessionTarget}. Resuming...`);
+                    requestWakeLock(); // Request Wake Lock on page reload
                     // We just loaded a new page after a search. Wait and continue.
                     scheduleNextSessionSearch();
                 } else {

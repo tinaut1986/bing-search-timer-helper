@@ -169,5 +169,8 @@
   },
   "disclaimerCancel": {
     "message": "Cancel·lar"
+  },
+  "timerGoalReached": {
+    "message": "Objectiu assolit!"
   }
 }
