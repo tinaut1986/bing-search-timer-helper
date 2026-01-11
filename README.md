@@ -18,6 +18,13 @@ A Firefox browser extension that adds a configurable, movable timer with dynamic
 *   **Persistent Settings:** Remembers the timer goal and widget position across sessions.
 *   **Configurable Data:** Edit the search templates and data lists via the extension's options page.
 *   **Automatic Reset:** The timer automatically resets when a new Bing search is performed.
+*   **Microsoft Rewards Integration:**
+    *   **Points Balance:** View your current Microsoft Rewards points directly in the widget.
+    *   **Amazon Equivalent:** Automatically calculates the value of your points in € for Amazon gift cards.
+    *   **Daily Progress Tracker:** Shows how many of your daily searches you've completed (e.g., 12/30).
+    *   **Daily Tasks Status:** Alerts you if your "Daily Set" tasks are pending or completed.
+    *   **Account Safety Monitor:** Quick indicator to check if your account status is active or suspended.
+    *   **Real-time Data:** Syncs with Bing's internal Rewards data for maximum accuracy and speed.
 
 ## Installation
 

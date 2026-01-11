@@ -9,6 +9,16 @@
     <div class="popup-header">
       <h3>Bing Search Timer</h3>
     </div>
+    <div class="popup-rewards" id="rewards-container">
+      <div class="reward-item">
+        <span class="reward-label" data-i18n="lblPoints">Puntos Rewards:</span>
+        <span class="reward-value" id="rewards-points">--</span>
+      </div>
+      <div class="reward-item">
+        <span class="reward-label" data-i18n="lblAmazonValue">Equivalente Amazon:</span>
+        <span class="reward-value" id="amazon-value">--</span>
+      </div>
+    </div>
     <div class="popup-buttons">
       <button id="open-bing" class="popup-button">
         <span class="button-icon">🔍</span>
@@ -20,6 +30,7 @@
       </button>
     </div>
   </div>
+  <script src="shared/i18n.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

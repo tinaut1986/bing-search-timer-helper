@@ -45,6 +45,13 @@
 
     // --- Interface Element Variables ---
     let totalTodayLabel; // New variable for total searches today display
+    let rewardsPointsLabel, amazonValueLabel, dailyProgressLabel, dailyTasksLabel, accountStatusLabel; // Variables for rewards display
+
+    let rewardsPoints = null; // Current rewards points balance
+    let dailyPointsTotal = 0;
+    let dailyPointsTarget = 0;
+    let dailyCheckInProgress = 0;
+    let isSuspended = false;
 
     // --- Auto-Search Session Variables ---
     let autoSessionActive = false;
@@ -106,6 +113,129 @@
             if (callNow) func.apply(context, args);
         };
     };
+
+    /**
+     * Extracts Microsoft Rewards points from the Bing page.
+     */
+    function extractRewardsPoints() {
+        const data = { balance: null, earned: null, limit: null, dailyCheck: null, suspended: null };
+        try {
+            // BEST SOURCE: Search through script tags in REVERSE order (gets the most recent one in SPA)
+            const scriptTags = Array.from(document.querySelectorAll('script')).reverse();
+            for (const script of scriptTags) {
+                const content = script.textContent;
+                if (content && content.includes('RewardsBalance')) {
+                    const balanceMatch = content.match(/"RewardsBalance":\s*(\d+)/);
+                    if (balanceMatch && data.balance === null) data.balance = parseInt(balanceMatch[1], 10);
+
+                    const earnedMatch = content.match(/"DailySearchPointsEarned":\s*(\d+)/);
+                    if (earnedMatch && data.earned === null) data.earned = parseInt(earnedMatch[1], 10);
+
+                    const limitMatch = content.match(/"DailySearchPointsLimit":\s*(\d+)/);
+                    if (limitMatch && data.limit === null) data.limit = parseInt(limitMatch[1], 10);
+
+                    const dailyCheckMatch = content.match(/"DailyCheckInProgress":\s*(\d+)/);
+                    if (dailyCheckMatch && data.dailyCheck === null) data.dailyCheck = parseInt(dailyCheckMatch[1], 10);
+
+                    const suspendedMatch = content.match(/"IsSuspended":\s*(true|false)/);
+                    if (suspendedMatch && data.suspended === null) data.suspended = suspendedMatch[1] === 'true';
+
+                    // If we found the main data points, we can stop
+                    if (data.balance !== null && data.dailyCheck !== null) break;
+                }
+            }
+
+            // SOURCE 2: data-content attribute (often more dynamic than scripts)
+            const rewardsElement = document.querySelector('#rh_rwm');
+            if (rewardsElement) {
+                const dataContent = rewardsElement.getAttribute('data-content');
+                if (dataContent) {
+                    try {
+                        const rewardsData = JSON.parse(atob(dataContent));
+                        if (rewardsData) {
+                            if (data.balance === null && rewardsData.balance !== undefined) data.balance = rewardsData.balance;
+                            // Check if dailyCheck is also in data-content (depends on Bing version)
+                            if (data.dailyCheck === null && rewardsData.dailyCheckInProgress !== undefined) data.dailyCheck = rewardsData.dailyCheckInProgress;
+                        }
+                    } catch (e) { /* ignore parse errors */ }
+                }
+            }
+
+            // SOURCE 3: Visible text extraction (as last resort for balance)
+            if (data.balance === null) {
+                const pointsSelector = '#id_rh_w .points-container, #id_rh_w, .id_rewardtext, #id_rh';
+                const pointsElement = document.querySelector(pointsSelector);
+                if (pointsElement) {
+                    const cleanText = pointsElement.innerText.replace(/[^0-9]/g, '');
+                    if (cleanText) {
+                        const pointsNum = parseInt(cleanText, 10);
+                        if (!isNaN(pointsNum) && pointsNum > 0) data.balance = pointsNum;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("BST: Error extracting rewards points:", e);
+        }
+        return data;
+    }
+
+    /**
+     * Updates the UI labels for rewards points and Amazon value.
+     */
+    function updateRewardsUI() {
+        if (rewardsPointsLabel && rewardsPoints !== null) {
+            rewardsPointsLabel.textContent = `${t('lblPoints')} ${rewardsPoints}`;
+            if (amazonValueLabel) {
+                const euros = (rewardsPoints / 1338).toFixed(2);
+                amazonValueLabel.textContent = `${t('lblAmazonValue')} ${euros}€`;
+            }
+            if (dailyProgressLabel && dailyPointsTarget > 0) {
+                const searchesDone = Math.floor(dailyPointsTotal / 3);
+                const searchesLimit = Math.floor(dailyPointsTarget / 3);
+                dailyProgressLabel.textContent = `${t('lblDailyProgress')} ${searchesDone}/${searchesLimit} (${dailyPointsTotal}/${dailyPointsTarget} pts)`;
+            }
+            
+            if (dailyTasksLabel) {
+                // Usually DailyCheckInProgress > 0 means there are pending tasks
+                const hasPending = dailyCheckInProgress > 0;
+                dailyTasksLabel.textContent = `${t('lblDailyTasks')} ${hasPending ? '⏳ Pendientes' : '✅ Completadas'}`;
+                dailyTasksLabel.style.color = hasPending ? '#d9534f' : '#28a745';
+            }
+
+            if (accountStatusLabel) {
+                accountStatusLabel.textContent = `${t('lblAccountStatus')} ${isSuspended ? t('statusSuspended') : t('statusActive')}`;
+                accountStatusLabel.style.fontWeight = isSuspended ? 'bold' : 'normal';
+                accountStatusLabel.style.color = isSuspended ? 'red' : '#666';
+            }
+        }
+    }
+
+    /**
+     * Updates the stored rewards points and the UI.
+     */
+    async function updateRewardsPoints() {
+        const data = extractRewardsPoints();
+        if (data.balance !== null && (data.balance !== rewardsPoints || data.earned !== dailyPointsTotal || data.dailyCheck !== dailyCheckInProgress || data.suspended !== isSuspended)) {
+            rewardsPoints = data.balance;
+            dailyPointsTotal = data.earned ?? dailyPointsTotal;
+            dailyPointsTarget = data.limit ?? dailyPointsTarget;
+            dailyCheckInProgress = data.dailyCheck ?? dailyCheckInProgress;
+            isSuspended = data.suspended ?? isSuspended;
+            
+            updateRewardsUI();
+            try {
+                await browser.storage.local.set({ 
+                    rewardsPoints: rewardsPoints,
+                    dailyPointsTotal: dailyPointsTotal,
+                    dailyPointsTarget: dailyPointsTarget,
+                    dailyCheckInProgress: dailyCheckInProgress,
+                    isSuspended: isSuspended
+                });
+            } catch (err) {
+                console.error("BST: Failed to save rewards points:", err);
+            }
+        }
+    }
 
     // ========================================
     // === Search Suggestion Generation Logic ===
@@ -788,6 +918,52 @@
         pasteSearchButton.id = 'bing-paste-search-button';
         pasteSearchButton.title = t('btnPaste');
 
+        // --- Rewards Display ---
+        const rewardsDiv = document.createElement('div');
+        rewardsDiv.id = 'bing-rewards-container';
+        rewardsDiv.style.marginTop = '10px';
+        rewardsDiv.style.padding = '8px';
+        rewardsDiv.style.borderRadius = '5px';
+        rewardsDiv.style.backgroundColor = '#f8f9fa';
+        rewardsDiv.style.border = '1px solid #eee';
+        rewardsDiv.style.fontSize = '12px';
+
+        rewardsPointsLabel = document.createElement('div');
+        rewardsPointsLabel.id = 'bing-rewards-points';
+        rewardsPointsLabel.textContent = `${t('lblPoints')} --`;
+
+        amazonValueLabel = document.createElement('div');
+        amazonValueLabel.id = 'bing-amazon-value';
+        amazonValueLabel.style.fontWeight = 'bold';
+        amazonValueLabel.style.color = '#ff9900'; // Amazon orange-ish
+        amazonValueLabel.textContent = `${t('lblAmazonValue')} --`;
+
+        dailyProgressLabel = document.createElement('div');
+        dailyProgressLabel.id = 'bing-rewards-daily-progress';
+        dailyProgressLabel.style.marginTop = '4px';
+        dailyProgressLabel.style.fontSize = '11px';
+        dailyProgressLabel.style.color = '#666';
+        dailyProgressLabel.textContent = `${t('lblDailyProgress')} --`;
+
+        dailyTasksLabel = document.createElement('div');
+        dailyTasksLabel.id = 'bing-rewards-daily-tasks';
+        dailyTasksLabel.style.marginTop = '4px';
+        dailyTasksLabel.style.fontSize = '11px';
+        dailyTasksLabel.textContent = `${t('lblDailyTasks')} --`;
+
+        accountStatusLabel = document.createElement('div');
+        accountStatusLabel.id = 'bing-rewards-account-status';
+        accountStatusLabel.style.marginTop = '4px';
+        accountStatusLabel.style.fontSize = '11px';
+        accountStatusLabel.style.color = '#666';
+        accountStatusLabel.textContent = `${t('lblAccountStatus')} --`;
+
+        rewardsDiv.appendChild(rewardsPointsLabel);
+        rewardsDiv.appendChild(amazonValueLabel);
+        rewardsDiv.appendChild(dailyProgressLabel);
+        rewardsDiv.appendChild(dailyTasksLabel);
+        rewardsDiv.appendChild(accountStatusLabel);
+
         // --- Checkbox Options ---
         const optionsDiv = document.createElement('div');
         optionsDiv.className = 'widget-options'; // Class for potential styling
@@ -941,6 +1117,7 @@
         contentWrapper.appendChild(timerDisplay);
         contentWrapper.appendChild(searchTitle);
         contentWrapper.appendChild(searchInput);
+        contentWrapper.appendChild(rewardsDiv);
         contentWrapper.appendChild(optionsDiv);
         contentWrapper.appendChild(sessionDiv);
         contentWrapper.appendChild(buttonGroup);
@@ -1652,13 +1829,20 @@
             }
         }, 300); // A 300ms debounce should be enough to prevent rapid-fire re-initialization.
 
+        // Microsoft Rewards points take a while to update in the DOM after a search.
+        // We wait 2 seconds (was 5) to ensure the script tags are updated.
+        const debouncedUpdateRewards = debounce(updateRewardsPoints, 2000);
+
         const observer = new MutationObserver(mutations => {
             // We use requestAnimationFrame to ensure we check the DOM after it has settled from the mutation.
             requestAnimationFrame(() => {
                 // 1. Handle re-initialization if the widget was removed.
                 reinitializeIfNeeded();
 
-                // 2. Handle URL changes for simple timer resets on SPA navigation.
+                // 2. Check for rewards updates if settle mutations occur
+                debouncedUpdateRewards();
+
+                // 3. Handle URL changes for simple timer resets on SPA navigation.
                 if (document.location.href !== lastHref) {
                     lastHref = document.location.href;
                     // If the widget still exists on a valid page, just reset the timer and update the suggestion.
@@ -1667,6 +1851,7 @@
                         resetTimer();
                         startTimer(); // Ensure timer starts again after reset
                         updateSearchDisplay();
+                        debouncedUpdateRewards();
 
                         // Session handling for SPA navigation (common on mobile)
                         if (autoSessionActive) {
@@ -1919,10 +2104,20 @@
                 isMinimized: false,
                 disclaimerConfirmed: false,
                 savedPosX: null,
-                savedPosY: null
+                savedPosY: null,
+                rewardsPoints: null,
+                dailyPointsTotal: 0,
+                dailyPointsTarget: 0,
+                dailyCheckInProgress: 0,
+                isSuspended: false
             });
 
             // 3. Assign Settings (Timer, Date, Used Searches)
+            rewardsPoints = userData.rewardsPoints ?? null;
+            dailyPointsTotal = userData.dailyPointsTotal ?? 0;
+            dailyPointsTarget = userData.dailyPointsTarget ?? 0;
+            dailyCheckInProgress = userData.dailyCheckInProgress ?? 0;
+            isSuspended = userData.isSuspended ?? false;
             TARGET_MINUTES = userData.timerTargetMinutes ?? DEFAULT_TARGET_MINUTES;
             TARGET_SECONDS = TARGET_MINUTES * 60;
             lastUsedDate = userData.lastUsedDate ?? '';
@@ -1981,6 +2176,7 @@
 
             // 8. Create the UI
             createInterface(); // Applies initial transform based on xOffset/yOffset
+            updateRewardsUI(); // Update UI after elements are created
 
             // 9. Adjust Position if Necessary (Initial Default OR Out-of-Bounds Saved)
             // Use setTimeout to ensure the element is rendered and has dimensions
@@ -2055,6 +2251,9 @@
 
             // Add resize listener
             window.addEventListener('resize', debounce(handleResize, 250));
+
+            // Initial rewards update
+            setTimeout(updateRewardsPoints, 2000); // Wait a bit for page to fully load rewards
         } catch (err) {
             console.error("Bing Search Timer: Error during main initialization block:", err);
             console.warn("Bing Search Timer: Extension failed to initialize properly.");

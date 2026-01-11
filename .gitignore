@@ -18,3 +18,7 @@ yarn.lock
 
 # Log files
 *.log
+
+# Browser extensions
+extension_chrome/
+extension_firefox/

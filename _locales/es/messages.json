@@ -11,6 +11,27 @@
     "suggestedSearchTitle": {
       "message": "Búsqueda Sugerida:"
     },
+    "lblPoints": {
+      "message": "Puntos Rewards:"
+    },
+    "lblAmazonValue": {
+      "message": "Equivalente Amazon:"
+    },
+    "lblDailyProgress": {
+      "message": "Progreso Diario:"
+    },
+    "lblDailyTasks": {
+      "message": "Tareas Diarias:"
+    },
+    "lblAccountStatus": {
+      "message": "Estado Cuenta:"
+    },
+    "statusActive": {
+      "message": "Activa ✅"
+    },
+    "statusSuspended": {
+      "message": "¡SUSPENDIDA! ⚠️"
+    },
     "dragHandle": {
       "message": "Mover"
     },
