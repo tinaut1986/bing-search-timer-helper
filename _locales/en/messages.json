@@ -26,6 +26,9 @@
   "lblAccountStatus": {
     "message": "Account Status:"
   },
+  "lblRewardsNotAvailableMobile": {
+    "message": "Data reading not available on mobile"
+  },
   "statusActive": {
     "message": "Active ✅"
   },

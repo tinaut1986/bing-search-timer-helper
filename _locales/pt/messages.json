@@ -24,7 +24,10 @@
     "message": "Tarefas diárias:"
   },
   "lblAccountStatus": {
-    "message": "Status da conta:"
+    "message": "Status da Conta:"
+  },
+  "lblRewardsNotAvailableMobile": {
+    "message": "Leitura de dados não disponível no telemóvel"
   },
   "statusActive": {
     "message": "Ativo ✅"

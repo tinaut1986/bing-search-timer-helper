@@ -24,7 +24,10 @@
     "message": "Tasques diàries:"
   },
   "lblAccountStatus": {
-    "message": "Estat del compte:"
+    "message": "Estat Compte:"
+  },
+  "lblRewardsNotAvailableMobile": {
+    "message": "Lectura de dades no disponible en mòbil"
   },
   "statusActive": {
     "message": "Actiu ✅"

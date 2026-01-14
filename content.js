@@ -62,6 +62,7 @@
     let wakeLock = null; // Variable for Screen Wake Lock
 
     // --- URL Tracking Variable ---
+    const isMobileBing = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     let lastHref = document.location.href; // Used by MutationObserver to detect navigation
 
     // ==================================
@@ -248,6 +249,20 @@
      * Updates the UI labels for rewards points and Amazon value.
      */
     function updateRewardsUI() {
+        if (isMobileBing) {
+            if (rewardsPointsLabel) {
+                rewardsPointsLabel.textContent = t('lblRewardsNotAvailableMobile');
+                rewardsPointsLabel.style.color = '#d9534f'; // Warning red
+                rewardsPointsLabel.style.fontWeight = 'bold';
+                rewardsPointsLabel.style.fontSize = '11px';
+            }
+            if (amazonValueLabel) amazonValueLabel.style.display = 'none';
+            if (dailyProgressLabel) dailyProgressLabel.style.display = 'none';
+            if (dailyTasksLabel) dailyTasksLabel.style.display = 'none';
+            if (accountStatusLabel) accountStatusLabel.style.display = 'none';
+            return;
+        }
+
         if (rewardsPointsLabel && rewardsPoints !== null) {
             rewardsPointsLabel.textContent = `${t('lblPoints')} ${rewardsPoints}`;
             if (amazonValueLabel) {

@@ -24,7 +24,10 @@
     "message": "Compiti giornalieri:"
   },
   "lblAccountStatus": {
-    "message": "Stato dell'account:"
+    "message": "Stato account:"
+  },
+  "lblRewardsNotAvailableMobile": {
+    "message": "Lettura dati non disponibile su mobile"
   },
   "statusActive": {
     "message": "Attivo ✅"
