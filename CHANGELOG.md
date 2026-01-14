@@ -1,14 +1,14 @@
 # Bing Search Timer Helper - Historial de Cambios
  
-## [1.9.0] - 2026-01-12
+## [1.9.0] - 2026-01-14
 
 ### Nuevas Características (Integración Microsoft Rewards)
-- **Visualización de Puntos**: Ahora puedes ver tu saldo total de puntos de Microsoft Rewards directamente en el recuadro.
-- **Conversión a Tarjetas Amazon**: Cálculo automático del valor de tus puntos en euros para tarjetas regalo de Amazon (1€ = 1338 pts).
-- **Progreso de Búsquedas Diario**: Indicador de búsquedas realizadas hoy (ej: 12/30) basado en los datos reales de tu cuenta.
+- **Visualización de Puntos**: Saldo total de puntos de Microsoft Rewards visible directamente en el widget.
+- **Conversión a Tarjetas Amazon**: Cálculo automático del valor en euros (1€ = 1338 pts) integrado de forma compacta junto al saldo de puntos.
+- **Progreso de Búsquedas Diario**: Indicador visual dinámico con estados diferenciados (En curso / Completado) y detección de reinicio diario.
 - **Estado de Tareas Diarias**: Alerta visual que indica si tienes el "Set Diario" de tareas pendiente o completado.
 - **Monitor de Seguridad de Cuenta**: Indicador del estado de la cuenta para detectar rápidamente suspensiones o bloqueos.
-- **Extracción de Datos de Alta Fidelidad**: Integración con los scripts internos de Bing (`ModernRewards`) para obtener datos en tiempo real con máxima precisión.
+- **Extracción de Datos**: Integración con los scripts internos de Bing para obtener datos en tiempo real con máxima precisión.
 
 ## [1.8.2] - 2025-12-29
 

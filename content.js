@@ -161,34 +161,51 @@
      * Extracts Microsoft Rewards points from the Bing page.
      */
     function extractRewardsPoints() {
-        const data = { balance: null, earned: null, limit: null, dailyCheck: null, suspended: null };
+        // We initialize with null to detect what we ACTUALLY find on the page
+        const res = { 
+            balance: null, 
+            earned: null, 
+            limit: null, 
+            dailyCheck: null, 
+            suspended: null 
+        };
+        let foundAny = false;
+        
         try {
-            // BEST SOURCE: Search through script tags in REVERSE order (gets the most recent one in SPA)
-            const scriptTags = Array.from(document.querySelectorAll('script')).reverse();
-            for (const script of scriptTags) {
-                const content = script.textContent;
-                if (content && content.includes('RewardsBalance')) {
-                    const balanceMatch = content.match(/"RewardsBalance":\s*(\d+)/);
-                    if (balanceMatch && data.balance === null) data.balance = parseInt(balanceMatch[1], 10);
-
-                    const earnedMatch = content.match(/"DailySearchPointsEarned":\s*(\d+)/);
-                    if (earnedMatch && data.earned === null) data.earned = parseInt(earnedMatch[1], 10);
-
-                    const limitMatch = content.match(/"DailySearchPointsLimit":\s*(\d+)/);
-                    if (limitMatch && data.limit === null) data.limit = parseInt(limitMatch[1], 10);
-
-                    const dailyCheckMatch = content.match(/"DailyCheckInProgress":\s*(\d+)/);
-                    if (dailyCheckMatch && data.dailyCheck === null) data.dailyCheck = parseInt(dailyCheckMatch[1], 10);
-
-                    const suspendedMatch = content.match(/"IsSuspended":\s*(true|false)/);
-                    if (suspendedMatch && data.suspended === null) data.suspended = suspendedMatch[1] === 'true';
-
-                    // If we found the main data points, we can stop
-                    if (data.balance !== null && data.dailyCheck !== null) break;
+            // STRATEGY 1: Global HTML Scan (Search for ALL occurrences and take the MAX)
+            const fullHtml = document.documentElement.innerHTML;
+            
+            // Helper to extract max from multiple occurrences ON THE PAGE
+            const extractMax = (regex) => {
+                const matches = Array.from(fullHtml.matchAll(regex));
+                let max = -1;
+                for (const m of matches) {
+                    const val = parseInt(m[1], 10);
+                    if (!isNaN(val)) {
+                        max = Math.max(max, val);
+                        foundAny = true;
+                    }
                 }
+                return max !== -1 ? max : null;
+            };
+
+            // Search with very flexible regex
+            res.balance = extractMax(/"(?:Rewards)?Balance":\s*"?(\d+)"?/gi);
+            res.earned = extractMax(/"DailySearchPointsEarned":\s*"?(\d+)"?/gi);
+            res.limit = extractMax(/"DailySearchPointsLimit":\s*"?(\d+)"?/gi);
+            res.dailyCheck = extractMax(/"DailyCheckInProgress":\s*"?(\d+)"?/gi);
+            
+            const sMatch = fullHtml.match(/"IsSuspended":\s*(true|false)/i);
+            if (sMatch) {
+                res.suspended = sMatch[1].toLowerCase() === 'true';
+                foundAny = true;
             }
 
-            // SOURCE 2: data-content attribute (often more dynamic than scripts)
+            if (foundAny) {
+                console.log(`BST Debug: Found data in HTML. Balance: ${res.balance}, Earned: ${res.earned}`);
+            }
+
+            // STRATEGY 2: Dynamic data-content Scan
             const rewardsElement = document.querySelector('#rh_rwm');
             if (rewardsElement) {
                 const dataContent = rewardsElement.getAttribute('data-content');
@@ -196,30 +213,35 @@
                     try {
                         const rewardsData = JSON.parse(atob(dataContent));
                         if (rewardsData) {
-                            if (data.balance === null && rewardsData.balance !== undefined) data.balance = rewardsData.balance;
-                            // Check if dailyCheck is also in data-content (depends on Bing version)
-                            if (data.dailyCheck === null && rewardsData.dailyCheckInProgress !== undefined) data.dailyCheck = rewardsData.dailyCheckInProgress;
-                        }
-                    } catch (e) { /* ignore parse errors */ }
-                }
-            }
+                            foundAny = true;
+                            // Deep search for keys that might contain our data
+                            const findKey = (obj, pattern) => {
+                                for (let key in obj) {
+                                    if (key.toLowerCase().includes(pattern.toLowerCase())) return obj[key];
+                                }
+                                return undefined;
+                            };
 
-            // SOURCE 3: Visible text extraction (as last resort for balance)
-            if (data.balance === null) {
-                const pointsSelector = '#id_rh_w .points-container, #id_rh_w, .id_rewardtext, #id_rh';
-                const pointsElement = document.querySelector(pointsSelector);
-                if (pointsElement) {
-                    const cleanText = pointsElement.innerText.replace(/[^0-9]/g, '');
-                    if (cleanText) {
-                        const pointsNum = parseInt(cleanText, 10);
-                        if (!isNaN(pointsNum) && pointsNum > 0) data.balance = pointsNum;
-                    }
+                            const b = findKey(rewardsData, 'Balance');
+                            const e = findKey(rewardsData, 'Earned') || findKey(rewardsData, 'DailyPoints');
+                            const l = findKey(rewardsData, 'Limit') || findKey(rewardsData, 'MaxPoints');
+                            const c = findKey(rewardsData, 'DailyCheck') || findKey(rewardsData, 'InProgress');
+
+                            if (b !== undefined) res.balance = Math.max(res.balance || 0, parseInt(b, 10));
+                            if (e !== undefined) res.earned = Math.max(res.earned || 0, parseInt(e, 10));
+                            if (l !== undefined) res.limit = Math.max(res.limit || 0, parseInt(l, 10));
+                            if (c !== undefined) res.dailyCheck = Math.max(res.dailyCheck || 0, parseInt(c, 10));
+                            
+                            console.log(`BST Debug: Checked data-content. Current Earned on page: ${res.earned}`);
+                        }
+                    } catch (e) { console.warn("BST Debug: data-content parse error", e); }
                 }
             }
         } catch (e) {
             console.error("BST: Error extracting rewards points:", e);
         }
-        return data;
+
+        return foundAny ? res : null;
     }
 
     /**
@@ -230,42 +252,56 @@
             rewardsPointsLabel.textContent = `${t('lblPoints')} ${rewardsPoints}`;
             if (amazonValueLabel) {
                 const euros = (rewardsPoints / 1338).toFixed(2);
-                amazonValueLabel.textContent = `${t('lblAmazonValue')} ${euros}€`;
+                amazonValueLabel.textContent = `(${euros}€)`;
             }
             if (dailyProgressLabel && dailyPointsTarget > 0) {
+                const isComplete = dailyPointsTotal >= dailyPointsTarget;
                 const searchesDone = Math.floor(dailyPointsTotal / 3);
                 const searchesLimit = Math.floor(dailyPointsTarget / 3);
-                dailyProgressLabel.textContent = `${t('lblDailyProgress')} ${searchesDone}/${searchesLimit} (${dailyPointsTotal}/${dailyPointsTarget} pts)`;
+                const statusIcon = isComplete ? '✅' : '⏳';
+                
+                dailyProgressLabel.textContent = `${t('lblDailyProgress')} ${statusIcon} ${searchesDone}/${searchesLimit} (${dailyPointsTotal}/${dailyPointsTarget} pts)`;
+                dailyProgressLabel.style.color = isComplete ? '#28a745' : '#d9534f';
+                dailyProgressLabel.style.fontWeight = isComplete ? 'bold' : 'normal';
             }
             
             if (dailyTasksLabel) {
-                // Usually DailyCheckInProgress > 0 means there are pending tasks
                 const hasPending = dailyCheckInProgress > 0;
                 dailyTasksLabel.textContent = `${t('lblDailyTasks')} ${hasPending ? '⏳ Pendientes' : '✅ Completadas'}`;
                 dailyTasksLabel.style.color = hasPending ? '#d9534f' : '#28a745';
+                dailyTasksLabel.style.fontWeight = !hasPending ? 'bold' : 'normal';
             }
 
             if (accountStatusLabel) {
-                accountStatusLabel.textContent = `${t('lblAccountStatus')} ${isSuspended ? t('statusSuspended') : t('statusActive')}`;
-                accountStatusLabel.style.fontWeight = isSuspended ? 'bold' : 'normal';
-                accountStatusLabel.style.color = isSuspended ? 'red' : '#666';
+                const statusText = isSuspended ? t('statusSuspended') : t('statusActive');
+                accountStatusLabel.title = `${t('lblAccountStatus')} ${statusText}`;
+                accountStatusLabel.style.backgroundColor = isSuspended ? '#d9534f' : '#28a745';
+                // Add a subtle glow if suspended to warn the user without being intrusive
+                accountStatusLabel.style.boxShadow = isSuspended ? '0 0 5px rgba(217, 83, 79, 0.8)' : 'none';
             }
         }
     }
 
     /**
      * Updates the stored rewards points and the UI.
+     * Forces UI update even if values seem identical to ensure sync with current page.
      */
     async function updateRewardsPoints() {
         const data = extractRewardsPoints();
-        if (data.balance !== null && (data.balance !== rewardsPoints || data.earned !== dailyPointsTotal || data.dailyCheck !== dailyCheckInProgress || data.suspended !== isSuspended)) {
-            rewardsPoints = data.balance;
-            dailyPointsTotal = data.earned ?? dailyPointsTotal;
-            dailyPointsTarget = data.limit ?? dailyPointsTarget;
-            dailyCheckInProgress = data.dailyCheck ?? dailyCheckInProgress;
-            isSuspended = data.suspended ?? isSuspended;
+        
+        // If we found valid data, we update our local variables and the UI
+        if (data) {
+            // Update only fields that were actually found on the page
+            if (data.balance !== null) rewardsPoints = data.balance;
+            if (data.earned !== null) dailyPointsTotal = data.earned;
+            if (data.limit !== null) dailyPointsTarget = data.limit;
+            if (data.dailyCheck !== null) dailyCheckInProgress = data.dailyCheck;
+            if (data.suspended !== null) isSuspended = data.suspended;
             
+            // ALWAYS update UI to ensure it matches the extracted data
             updateRewardsUI();
+
+            // Save to storage
             try {
                 await browser.storage.local.set({ 
                     rewardsPoints: rewardsPoints,
@@ -974,21 +1010,32 @@
         const rewardsDiv = document.createElement('div');
         rewardsDiv.id = 'bing-rewards-container';
         rewardsDiv.style.marginTop = '10px';
-        rewardsDiv.style.padding = '8px';
+        rewardsDiv.style.position = 'relative'; // Support absolute child
+        rewardsDiv.style.padding = '12px 8px 8px 8px'; // Add some top space for the indicator
         rewardsDiv.style.borderRadius = '5px';
         rewardsDiv.style.backgroundColor = '#f8f9fa';
         rewardsDiv.style.border = '1px solid #eee';
         rewardsDiv.style.fontSize = '12px';
+        const pointsRow = document.createElement('div');
+        pointsRow.id = 'bing-rewards-points-row';
+        pointsRow.style.display = 'flex';
+        pointsRow.style.alignItems = 'center';
+        pointsRow.style.gap = '6px';
 
-        rewardsPointsLabel = document.createElement('div');
+        rewardsPointsLabel = document.createElement('span');
         rewardsPointsLabel.id = 'bing-rewards-points';
         rewardsPointsLabel.textContent = `${t('lblPoints')} --`;
 
-        amazonValueLabel = document.createElement('div');
+        amazonValueLabel = document.createElement('span');
         amazonValueLabel.id = 'bing-amazon-value';
         amazonValueLabel.style.fontWeight = 'bold';
-        amazonValueLabel.style.color = '#ff9900'; // Amazon orange-ish
-        amazonValueLabel.textContent = `${t('lblAmazonValue')} --`;
+        amazonValueLabel.style.color = '#ffc107'; // Vibrant Yellow
+        amazonValueLabel.textContent = `(--€)`;
+        amazonValueLabel.style.cursor = 'help';
+        amazonValueLabel.title = t('lblAmazonValue'); // Tooltip explained here
+
+        pointsRow.appendChild(rewardsPointsLabel);
+        pointsRow.appendChild(amazonValueLabel);
 
         dailyProgressLabel = document.createElement('div');
         dailyProgressLabel.id = 'bing-rewards-daily-progress';
@@ -1005,16 +1052,23 @@
 
         accountStatusLabel = document.createElement('div');
         accountStatusLabel.id = 'bing-rewards-account-status';
-        accountStatusLabel.style.marginTop = '4px';
-        accountStatusLabel.style.fontSize = '11px';
-        accountStatusLabel.style.color = '#666';
-        accountStatusLabel.textContent = `${t('lblAccountStatus')} --`;
+        accountStatusLabel.style.position = 'absolute';
+        accountStatusLabel.style.top = '6px';
+        accountStatusLabel.style.right = '6px';
+        accountStatusLabel.style.width = '7px';
+        accountStatusLabel.style.height = '7px';
+        accountStatusLabel.style.borderRadius = '50%';
+        accountStatusLabel.style.backgroundColor = '#28a745'; // Default green
+        accountStatusLabel.style.cursor = 'help';
+        accountStatusLabel.title = t('lblAccountStatus');
 
-        rewardsDiv.appendChild(rewardsPointsLabel);
-        rewardsDiv.appendChild(amazonValueLabel);
+        rewardsDiv.appendChild(pointsRow);
         rewardsDiv.appendChild(dailyProgressLabel);
         rewardsDiv.appendChild(dailyTasksLabel);
         rewardsDiv.appendChild(accountStatusLabel);
+        
+        // Initial update to sync UI with page data immediately
+        setTimeout(updateRewardsPoints, 500);
 
         // --- Checkbox Options ---
         const optionsDiv = document.createElement('div');
@@ -2240,12 +2294,19 @@
                 needsAdjustToRightDefault = true; // Set flag to adjust to right after creation
             }
 
-            // 6. Handle Daily Reset for Used Searches
+            // 6. Handle Daily Reset for Used Searches and Rewards progress
             const today = new Date().toISOString().split('T')[0];
             if (lastUsedDate !== today) {
                 usedSearchesToday = [];
+                dailyPointsTotal = 0; // Reset progress today
                 lastUsedDate = today;
-                try { await browser.storage.local.set({ lastUsedDate: today, usedSearchesToday: [] }); }
+                try { 
+                    await browser.storage.local.set({ 
+                        lastUsedDate: today, 
+                        usedSearchesToday: [],
+                        dailyPointsTotal: 0
+                    }); 
+                }
                 catch (saveErr) { console.error("Error saving reset search data:", saveErr); }
             } else
                 usedSearchesToday = Array.isArray(loadedUsedSearches) ? loadedUsedSearches : [];
