@@ -107,8 +107,23 @@ async function saveOptions(e) {
 
     // Save processed settings
     try {
+        const appLangSelect = document.getElementById('appLanguage');
+        if (appLangSelect) {
+            const appLang = appLangSelect.value;
+            settingsToSave.appLanguage = (appLang === 'default') ? null : appLang;
+        }
+
         await browser.storage.local.set(settingsToSave);
         showStatus('Options saved successfully.', 'success');
+
+        // Reload if language changed to apply new locale to data files
+        const savedLang = settingsToSave.appLanguage;
+        if (savedLang && savedLang !== ACTIVE_LOCALE) {
+             setTimeout(() => window.location.search = `?lang=${savedLang}`, 1000);
+        } else if (!savedLang && location.search) {
+             setTimeout(() => window.location.search = '', 1000);
+        }
+
     } catch (error) {
         console.error("Error saving options:", error);
         showStatus(`Error saving options: ${error.message}`, 'error', 0);
@@ -119,11 +134,24 @@ async function saveOptions(e) {
  * Load saved settings from storage or fallback to defaults.
  */
 async function restoreOptions() {
-    const storageRequest = {};
+    const storageRequest = { appLanguage: 'default' };
     for (const key in configKeys)
         storageRequest[`${key}_${ACTIVE_LOCALE}`] = null;
 
     const userSettings = await browser.storage.local.get(storageRequest);
+
+    // Apply language selection
+    const appLang = userSettings.appLanguage || 'default';
+    const langSelect = document.getElementById('appLanguage');
+    if (langSelect) langSelect.value = appLang;
+
+    // Check if we need to reload to match stored language preference
+    if (appLang !== 'default' && appLang !== ACTIVE_LOCALE) {
+        console.log(`Redirecting to correct locale: ${appLang}`);
+        window.location.search = `?lang=${appLang}`;
+        return; // Stop loading data for wrong locale
+    }
+
 
     try {
         const defaultsPromises = [];

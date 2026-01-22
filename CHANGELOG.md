@@ -1,5 +1,14 @@
 # Bing Search Timer Helper - Historial de Cambios
  
+## [1.10.0] - 2026-01-22
+
+### Nuevas Características
+- **Selección Manual de Idioma**: Ahora puedes forzar el idioma de la extensión desde la página de opciones, ignorando el idioma del navegador.
+- **Soporte de Datos Localizados**: Las plantillas de búsqueda (juegos, géneros, etc.) ahora se cargan según el idioma seleccionado manualmente.
+
+### Mejoras
+- **Carga de Idiomas**: Sistema de internacionalización mejorado para soportar cambios dinámicos sin reiniciar el navegador.
+
 ## [1.9.0] - 2026-01-14
 
 ### Nuevas Características (Integración Microsoft Rewards)

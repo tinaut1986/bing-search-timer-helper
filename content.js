@@ -1,5 +1,6 @@
 (async function () {
     'use strict';
+    if (window.i18nReady) await window.i18nReady;
     // Compatibility shim for Chrome/Firefox/Android
     globalThis.browser = globalThis.browser || globalThis.chrome;
 
@@ -2175,7 +2176,9 @@
      */
     async function loadDataFromFiles() {
         try {
-            const locale = (browser.i18n.getUILanguage() || 'en').split('-')[0];
+            const settings = await browser.storage.local.get({ appLanguage: null });
+            const uiLang = (browser.i18n.getUILanguage() || 'en').split('-')[0];
+            const locale = settings.appLanguage || uiLang;
 
             const files = [
                 'searchTemplates.json',
