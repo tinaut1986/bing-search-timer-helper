@@ -1,6 +1,17 @@
 # Bing Search Timer Helper - Historial de Cambios
  
-## [1.10.0] - 2026-01-22
++## [1.11.0] - 2026-05-09
++
++### Nuevas Características
++- **Parar al llegar al límite**: Nueva opción para detener automáticamente las sesiones de búsqueda cuando se alcanza el límite diario de puntos de Microsoft Rewards.
++- **Detección inteligente de puntos**: El sistema monitoriza el progreso real (obtenido vs límite) para finalizar la sesión sin intervención manual.
++
++### Mejoras
++- **Compatibilidad Firefox (V2)**: Se ha vuelto a Manifest V2 específicamente en Firefox para restaurar la concesión automática de permisos en Bing.com (evita tener que activarlo manualmente).
++- **Script de Construcción**: Mejorada la robustez del script `build_extension.py` con limpieza automática de archivos previos y mejor manejo de errores en Windows.
++- **Localización**: Añadidas traducciones para la nueva funcionalidad en todos los idiomas soportados.
++
+ ## [1.10.0] - 2026-01-22
 
 ### Nuevas Características
 - **Selección Manual de Idioma**: Ahora puedes forzar el idioma de la extensión desde la página de opciones, ignorando el idioma del navegador.

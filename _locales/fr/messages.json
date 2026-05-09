@@ -59,6 +59,9 @@
   "chkSimulateTyping": {
     "message": "Simuler la frappe ?"
   },
+  "chkStopAtLimit": {
+    "message": "Arrêter à la limite ?"
+  },
   "modalTitle": {
     "message": "Recherches suggérées aujourd’hui"
   },
@@ -154,6 +157,9 @@
   },
   "notifSessionDoneBody": {
     "message": "Les $1 recherches programmées ont été effectuées."
+  },
+  "notifLimitReachedBody": {
+    "message": "Limite quotidienne de points Bing Rewards atteinte."
   },
   "disclaimerText": {
     "message": "Cet outil est fourni 'en l'état'. L'auteur n'est pas responsable des éventuels bannissements ou limitations de votre compte. Il n'est pas possible de garantir comment Microsoft détecte l'utilisation d'outils d'assistance. Utilisez-le à vos propres risques."

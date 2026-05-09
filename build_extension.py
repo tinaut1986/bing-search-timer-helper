@@ -25,13 +25,38 @@ def create_bundle(browser_name):
             
         output_file = 'extension_chrome.zip'
     else:
-        # --- Adjustments for Firefox (Manifest V3) ---
-        # Firefox requires 'scripts' array and doesn't support 'service_worker' key in MV3 yet
-        # Our base manifest already uses 'scripts', but let's handle the case if it were reversed
-        if 'background' in manifest and 'service_worker' in manifest['background']:
-            manifest['background']['scripts'] = [manifest['background']['service_worker']]
-            del manifest['background']['service_worker']
-        
+        # --- Adjustments for Firefox (Downgrade to Manifest V2 for automatic permissions) ---
+        # In MV3, Firefox treats host permissions as optional, which prevents the content script 
+        # from loading automatically until the user grants permission. MV2 avoids this.
+        manifest['manifest_version'] = 2
+
+        # Convert 'action' to 'browser_action' for MV2
+        if 'action' in manifest:
+            manifest['browser_action'] = manifest.pop('action')
+
+        # Move 'host_permissions' to 'permissions' for MV2
+        if 'host_permissions' in manifest:
+            if 'permissions' not in manifest:
+                manifest['permissions'] = []
+            # Ensure no duplicates
+            manifest['permissions'] = list(set(manifest['permissions'] + manifest.pop('host_permissions')))
+
+        # Adjust Background for MV2 (Event Page)
+        if 'background' in manifest:
+            if 'service_worker' in manifest['background']:
+                manifest['background']['scripts'] = [manifest['background'].pop('service_worker')]
+            manifest['background']['persistent'] = False
+
+        # Convert 'web_accessible_resources' from MV3 (objects) to MV2 (flat strings)
+        if 'web_accessible_resources' in manifest:
+            resources_v2 = []
+            for entry in manifest['web_accessible_resources']:
+                if isinstance(entry, dict) and 'resources' in entry:
+                    resources_v2.extend(entry['resources'])
+                elif isinstance(entry, str):
+                    resources_v2.append(entry)
+            manifest['web_accessible_resources'] = resources_v2
+
         # Ensure 'browser_specific_settings' exists for Firefox
         if 'browser_specific_settings' not in manifest:
             manifest['browser_specific_settings'] = {"gecko": {}}
@@ -40,12 +65,17 @@ def create_bundle(browser_name):
         if 'id' not in manifest['browser_specific_settings']['gecko']:
             # Make sure this ID matches the one in the store if updating!
             manifest['browser_specific_settings']['gecko']['id'] = "bing-timer-helper@tinaut1986.example.com"
-
-        # NOTE: Removed 'data_collection_permissions' injection as it was causing validation errors.
         
         output_file = 'extension_firefox.zip'
 
     # Create the zip file emulating the extension root
+    # Delete existing file if it exists to avoid Errno 22 on some Windows environments
+    if os.path.exists(output_file):
+        try:
+            os.remove(output_file)
+        except OSError as e:
+            print(f"⚠️ Warning: Could not delete existing {output_file}: {e}")
+
     with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         # Files and directories to strictly ignore
         ignore = {

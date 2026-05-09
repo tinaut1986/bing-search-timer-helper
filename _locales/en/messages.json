@@ -62,6 +62,9 @@
   "chkSimulateTyping": {
     "message": "Simulate Typing?"
   },
+  "chkStopAtLimit": {
+    "message": "Stop at limit?"
+  },
   "modalTitle": {
     "message": "Searches Suggested Today"
   },
@@ -152,11 +155,22 @@
   "statusSession": {
     "message": "Session: $1 / $2"
   },
+  "statusSessionLimit": {
+    "message": "Session: $1 / Limit",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
   "notifSessionDoneTitle": {
     "message": "Session Completed"
   },
   "notifSessionDoneBody": {
     "message": "The $1 scheduled searches have been completed."
+  },
+  "notifLimitReachedBody": {
+    "message": "Daily Bing Rewards limit reached."
   },
   "disclaimerText": {
     "message": "This tool is provided 'as is'. The author is not responsible for any possible account bans or limitations. It is not possible to guarantee how Microsoft detects the use of assistance tools. Use at your own risk."

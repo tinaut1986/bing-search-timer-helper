@@ -60,6 +60,8 @@
     let autoSessionCurrent = 0;
     let autoSessionTimeout = null;
     let autoSessionInput, autoSessionButton, autoSessionStatusLabel, minimizedSessionButton;
+    let autoSessionStopAtLimit = false;
+    let autoSessionStopAtLimitCheckbox, autoSessionStopAtLimitLabel;
     let wakeLock = null; // Variable for Screen Wake Lock
 
     // --- URL Tracking Variable ---
@@ -1190,6 +1192,27 @@
         autoSessionInput.max = 100;
         autoSessionInput.style.width = '50px';
         autoSessionInput.style.padding = '4px';
+        autoSessionInput.disabled = autoSessionStopAtLimit;
+
+        autoSessionStopAtLimitCheckbox = document.createElement('input');
+        autoSessionStopAtLimitCheckbox.type = 'checkbox';
+        autoSessionStopAtLimitCheckbox.id = 'bing-stop-at-limit-check';
+        autoSessionStopAtLimitCheckbox.checked = autoSessionStopAtLimit;
+        autoSessionStopAtLimitCheckbox.style.marginRight = '5px';
+        autoSessionStopAtLimitCheckbox.style.verticalAlign = 'middle';
+
+        autoSessionStopAtLimitLabel = document.createElement('label');
+        autoSessionStopAtLimitLabel.htmlFor = 'bing-stop-at-limit-check';
+        autoSessionStopAtLimitLabel.textContent = t('chkStopAtLimit');
+        autoSessionStopAtLimitLabel.title = 'Stop session automatically when Bing Rewards limit is reached.';
+        autoSessionStopAtLimitLabel.style.cursor = 'pointer';
+        autoSessionStopAtLimitLabel.style.fontSize = '11px';
+
+        const limitRow = document.createElement('div');
+        limitRow.className = 'option-row';
+        limitRow.style.marginTop = '5px';
+        limitRow.appendChild(autoSessionStopAtLimitCheckbox);
+        limitRow.appendChild(autoSessionStopAtLimitLabel);
 
         autoSessionButton = document.createElement('button');
         autoSessionButton.id = 'bing-session-button';
@@ -1220,6 +1243,7 @@
         sessionInputRow.appendChild(autoSessionButton);
         sessionDiv.appendChild(sessionTitle);
         sessionDiv.appendChild(sessionInputRow);
+        sessionDiv.appendChild(limitRow);
         sessionDiv.appendChild(autoSessionStatusLabel);
         sessionDiv.appendChild(totalTodayLabel);
 
@@ -1290,8 +1314,14 @@
         }
         if (autoSessionInput) {
             autoSessionInput.addEventListener('change', (e) => {
-                autoSessionTarget = parseInt(e.target.value, 10) || 30;
                 browser.storage.local.set({ autoSessionTarget });
+            });
+        }
+        if (autoSessionStopAtLimitCheckbox) {
+            autoSessionStopAtLimitCheckbox.addEventListener('change', (e) => {
+                autoSessionStopAtLimit = e.target.checked;
+                if (autoSessionInput) autoSessionInput.disabled = autoSessionStopAtLimit;
+                browser.storage.local.set({ autoSessionStopAtLimit });
             });
         }
 
@@ -1759,7 +1789,8 @@
         await browser.storage.local.set({
             autoSessionActive: true,
             autoSessionTarget: target,
-            autoSessionCurrent: 0
+            autoSessionCurrent: 0,
+            autoSessionStopAtLimit: autoSessionStopAtLimit
         });
 
         updateSessionUI();
@@ -1780,15 +1811,15 @@
      * Stops the current session.
      */
     async function stopAutoSession() {
+        // Capture current state for notification logic BEFORE resetting
+        const wasTargetReached = shouldStopSession();
+        const currentTarget = autoSessionTarget;
+
         autoSessionActive = false;
         if (autoSessionTimeout) {
             clearTimeout(autoSessionTimeout);
             autoSessionTimeout = null;
         }
-
-        // Capture current state for notification logic
-        const wasTargetReached = autoSessionCurrent >= autoSessionTarget;
-        const currentTarget = autoSessionTarget;
 
         // Reset the counter to 0 as requested
         autoSessionCurrent = 0;
@@ -1806,12 +1837,43 @@
 
         // If it was stopped because it reached target, show notification
         if (wasTargetReached) {
+            let message = t('notifSessionDoneBody', [currentTarget]);
+            if (autoSessionStopAtLimit && dailyPointsTarget > 0 && dailyPointsTotal >= dailyPointsTarget) {
+                message = t('notifLimitReachedBody');
+            }
             browser.runtime.sendMessage({
                 type: "showNotification",
                 title: t('notifSessionDoneTitle'),
-                message: t('notifSessionDoneBody', [currentTarget])
+                message: message
             }).catch(err => console.error("Error sending session notification:", err));
         }
+    }
+
+    /**
+     * Helper to check if the session should continue or stop.
+     * @returns {boolean} True if it should stop, false to continue.
+     */
+    function shouldStopSession() {
+        if (!autoSessionActive) return true;
+
+        // Mode 1: Stop at limit
+        if (autoSessionStopAtLimit) {
+            // We need valid target data to decide
+            if (dailyPointsTarget > 0 && dailyPointsTotal >= dailyPointsTarget) {
+                console.log(`BST: Limit reached (${dailyPointsTotal}/${dailyPointsTarget}). Stopping session.`);
+                return true;
+            }
+            // If we don't have limit data yet, or haven't reached it, we continue.
+            // But we might want a safety cap (e.g. 100 searches) to avoid infinite loops if detection fails.
+            if (autoSessionCurrent >= 100) {
+                console.warn("BST: Safety cap reached (100 searches) in Limit Mode. Stopping.");
+                return true;
+            }
+            return false;
+        }
+
+        // Mode 2: Fixed target
+        return autoSessionCurrent >= autoSessionTarget;
     }
 
     /**
@@ -1832,6 +1894,12 @@
             // We need to increment the counter BEFORE pasting/clicking because the page will reload
             autoSessionCurrent++;
             await browser.storage.local.set({ autoSessionCurrent });
+
+            // Check if we should stop AFTER incrementing (for the next step)
+            if (shouldStopSession()) {
+                stopAutoSession();
+                return;
+            }
 
             updateSessionUI();
 
@@ -1869,7 +1937,15 @@
             minimizedSessionButton.title = autoSessionActive ? t('btnStopSession') : t('btnStartSession');
         }
         if (autoSessionStatusLabel) {
-            autoSessionStatusLabel.textContent = autoSessionActive ? t('statusSession', [autoSessionCurrent, autoSessionTarget]) : '';
+            if (autoSessionActive) {
+                if (autoSessionStopAtLimit) {
+                    autoSessionStatusLabel.textContent = t('statusSessionLimit', [autoSessionCurrent]);
+                } else {
+                    autoSessionStatusLabel.textContent = t('statusSession', [autoSessionCurrent, autoSessionTarget]);
+                }
+            } else {
+                autoSessionStatusLabel.textContent = '';
+            }
         }
         if (autoSessionInput) {
             autoSessionInput.disabled = autoSessionActive;
@@ -1884,7 +1960,15 @@
             const isGoal = !timerActive && secondsRemaining <= 0 && timerStartTime === null;
             const timeDisplay = isGoal ? t('timerGoalReached') : timeStr;
             
-            handleText.textContent = autoSessionActive ? `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}` : timeDisplay;
+            if (autoSessionActive) {
+                if (autoSessionStopAtLimit) {
+                    handleText.textContent = `${timeDisplay} | ${autoSessionCurrent}/Limit`;
+                } else {
+                    handleText.textContent = `${timeDisplay} | ${autoSessionCurrent}/${autoSessionTarget}`;
+                }
+            } else {
+                handleText.textContent = timeDisplay;
+            }
         }
     }
 
@@ -2256,6 +2340,7 @@
                 autoSessionCurrent: 0,
                 isMinimized: false,
                 disclaimerConfirmed: false,
+                autoSessionStopAtLimit: false,
                 savedPosX: null,
                 savedPosY: null,
                 rewardsPoints: null,
@@ -2283,6 +2368,7 @@
             autoSessionCurrent = userData.autoSessionCurrent ?? 0;
             isMinimized = userData.isMinimized ?? false;
             disclaimerConfirmed = userData.disclaimerConfirmed ?? false;
+            autoSessionStopAtLimit = userData.autoSessionStopAtLimit ?? false;
             savedPosBeforeMinimize = {
                 x: userData.savedPosX ?? 0,
                 y: userData.savedPosY ?? 0
@@ -2399,14 +2485,16 @@
 
             // --- Handle Session Persistence ---
             if (autoSessionActive) {
-                if (autoSessionCurrent < autoSessionTarget) {
-                    console.log(`Session active: ${autoSessionCurrent}/${autoSessionTarget}. Resuming...`);
+                // IMPORTANT: Rewards data might not be ready yet. 
+                // We'll do a quick check now, and scheduleNextSessionSearch will check again later.
+                if (shouldStopSession()) {
+                    console.log("Session end condition met on reload. Stopping.");
+                    stopAutoSession();
+                } else {
+                    console.log(`Session active: ${autoSessionCurrent}/${autoSessionStopAtLimit ? 'Limit' : autoSessionTarget}. Resuming...`);
                     requestWakeLock(); // Request Wake Lock on page reload
                     // We just loaded a new page after a search. Wait and continue.
                     scheduleNextSessionSearch();
-                } else {
-                    console.log("Session target reached. Stopping.");
-                    stopAutoSession();
                 }
             }
 

@@ -62,6 +62,9 @@
   "chkSimulateTyping": {
     "message": "Simular digitação?"
   },
+  "chkStopAtLimit": {
+    "message": "Parar ao atingir o limite?"
+  },
   "modalTitle": {
     "message": "Pesquisas sugeridas hoje"
   },
@@ -151,6 +154,14 @@
   },
   "statusSession": {
     "message": "Sessão: $1 / $2"
+  },
+  "statusSessionLimit": {
+    "message": "Sessão: $1 / Limite",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "notifSessionDoneTitle": {
     "message": "Sessão concluída"

@@ -62,6 +62,9 @@
   "chkSimulateTyping": {
     "message": "Simular escriptura?"
   },
+  "chkStopAtLimit": {
+    "message": "Aturar en arribar al límit?"
+  },
   "modalTitle": {
     "message": "Cerques suggerides avui"
   },
@@ -152,11 +155,22 @@
   "statusSession": {
     "message": "Sessió: $1 / $2"
   },
+  "statusSessionLimit": {
+    "message": "Sessió: $1 / Límit",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
   "notifSessionDoneTitle": {
     "message": "Sessió completada"
   },
   "notifSessionDoneBody": {
     "message": "S'han realitzat les $1 cerques programades."
+  },
+  "notifLimitReachedBody": {
+    "message": "S'ha assolit el límit de punts diari de Bing Rewards."
   },
   "disclaimerText": {
     "message": "Aquesta eina es proporciona 'tal com està'. L'autor no es fa responsable de possibles bannejos o limitacions al seu compte. No es pot garantir com Microsoft detecta l'ús d'eines d'assistència. Utilitzeu-la sota el vostre propi risc."
